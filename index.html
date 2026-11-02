@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Fatima Confeitaria RA</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+<style>
+  :root{
+    --white:#FFFFFF;
+    --gray:#F5F7FA;
+    --line:#E3E7EE;
+    --brown:#4A3525;
+    --ink:#1A1A1A;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{background:#000}
+  body{background:transparent!important}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    font-family:'Nunito',system-ui,sans-serif;color:var(--brown);touch-action:manipulation}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:1000;pointer-events:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display:flex;flex-direction:column;justify-content:space-between}
+  #hud button{pointer-events:auto;font-family:inherit}
+
+  #top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 0}
+  .brand{display:flex;align-items:center;gap:10px;background:var(--white);border:2px solid var(--brown);
+    border-radius:var(--radius);padding:6px 14px 6px 8px;box-shadow:0 4px 0 rgba(74,53,37,.25)}
+  .badge{width:38px;height:38px;border-radius:50%;background:var(--gray);display:grid;place-items:center;font-size:22px;border:2px solid var(--ink)}
+  .brand b{font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;display:block;line-height:1.1}
+  .brand small{font-size:12px;font-weight:700;opacity:.75}
+  #muteBtn{width:46px;height:46px;border-radius:var(--radius);border:2px solid var(--brown);background:var(--white);
+    font-size:20px;box-shadow:0 4px 0 rgba(74,53,37,.25);cursor:pointer}
+
+  #dots{display:flex;justify-content:center;gap:8px;padding:10px 0 0}
+  #dots i{width:34px;height:8px;border-radius:8px;background:rgba(255,255,255,.65);border:1.5px solid var(--brown);transition:.3s}
+  #dots i.on{background:var(--brown)}
+
+  #hint{align-self:center;background:var(--white);border:2px solid var(--brown);border-radius:var(--radius);
+    padding:10px 16px;font-weight:800;font-size:14px;text-align:center;max-width:88%;
+    box-shadow:0 4px 0 rgba(74,53,37,.25);transition:opacity .3s}
+  #hint.hide{opacity:0}
+
+  #banner{position:fixed;left:50%;top:32%;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(28px,9vw,52px);color:var(--brown);
+    background:var(--white);border:3px solid var(--brown);border-radius:24px;padding:10px 26px;white-space:nowrap;
+    box-shadow:0 6px 0 rgba(74,53,37,.3);transition:.35s cubic-bezier(.2,1.6,.4,1)}
+  #banner.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+  #panel{pointer-events:auto;align-self:center;width:100%;max-width:520px;margin:0 auto;
+    background:var(--white);border:2px solid var(--brown);border-bottom:0;border-radius:24px 24px 0 0;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(0,0,0,.25);
+    max-height:52vh;overflow-y:auto}
+  #speech{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  #speech .badge{flex:0 0 auto;width:46px;height:46px;font-size:26px}
+  #title{margin:0;font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;line-height:1.15}
+  #say{margin:2px 0 0;font-size:14px;font-weight:700;opacity:.8}
+
+  #options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  #options:empty{display:none}
+  .opt{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;text-align:left;
+    background:var(--gray);border:2.5px solid var(--line);border-radius:var(--radius);
+    font-weight:800;font-size:14px;color:var(--brown);cursor:pointer;transition:.15s}
+  .opt:active{transform:scale(.97)}
+  .opt.sel{background:var(--white);border-color:var(--brown);box-shadow:0 3px 0 var(--brown)}
+  .opt:last-child:nth-child(odd){grid-column:span 2}
+  .sw{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid var(--ink)}
+
+  #summary{display:none;background:var(--gray);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;
+    font-size:14px;font-weight:700;line-height:1.5}
+  #summary.on{display:block}
+
+  #mainBtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:var(--radius);
+    background:var(--brown);color:var(--white);font-family:'Fredoka',sans-serif;font-weight:500;font-size:19px;
+    box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:.15s}
+  #mainBtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  #mainBtn:disabled{opacity:.4;box-shadow:none;cursor:not-allowed}
+
+  @media (max-height:560px){
+    #panel{max-height:62vh;padding-top:8px}
+    #speech{margin-bottom:6px}
+    #dots{display:none}
+    .opt{min-height:46px}
+  }
+  .a-enter-vr,.a-orientation-modal{display:none!important}
+
+  /* ---------- Modo discreto: translúcido e só aparece depois de ler o marcador ---------- */
+  #top,#dots,#panel{opacity:0;pointer-events:none!important;transition:opacity .6s ease,transform .35s ease}
+  body.ready #top,body.ready #dots,body.ready #panel{opacity:1}
+  body.ready #top{pointer-events:none!important}
+  body.ready #panel{pointer-events:auto!important}
+  body.ready #muteBtn{pointer-events:auto}
+
+  #hint{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:50%;transform:translateX(-50%);
+    background:rgba(255,255,255,.85);
+    border:1px solid rgba(255,255,255,.85);border-radius:999px;padding:7px 14px;font-size:12px;
+    box-shadow:none;z-index:1001;pointer-events:none;width:max-content;max-width:92%}
+  body.ready #hint{top:calc(env(safe-area-inset-top) + 66px)}
+
+  .brand{background:rgba(255,255,255,.8);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none;padding:3px 12px 3px 4px;gap:8px}
+  .brand .badge{width:28px;height:28px;font-size:16px;border-width:1.5px}
+  .brand b{font-size:13px}.brand small{font-size:11px}
+  #muteBtn{width:36px;height:36px;font-size:15px;background:rgba(255,255,255,.8);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none}
+  #top{padding:8px 10px 0}
+  #dots{padding-top:6px;gap:6px}
+  #dots i{width:20px;height:4px;border-width:1px;background:rgba(255,255,255,.5)}
+  #dots i.on{background:var(--brown)}
+
+  #panel{background:rgba(255,255,255,.82);
+    border:1px solid rgba(255,255,255,.85);border-bottom:0;border-radius:20px 20px 0 0;
+    padding:2px 12px calc(10px + env(safe-area-inset-bottom));max-height:44vh;box-shadow:none}
+  #panel.min{transform:translateY(calc(100% - 26px))}
+  #handle{display:block;margin:0 auto 4px;width:72px;height:20px;border:0;background:transparent;
+    position:relative;cursor:pointer;pointer-events:auto}
+  #handle::after{content:'';position:absolute;left:8px;right:8px;top:8px;height:4px;border-radius:4px;
+    background:var(--brown);opacity:.45}
+  #speech{margin-bottom:6px;gap:8px}
+  #speech .badge{width:28px;height:28px;font-size:16px;border-width:1.5px}
+  #title{font-size:15px}
+  #say{font-size:12px;margin:0}
+  #options{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;scrollbar-width:none}
+  #options::-webkit-scrollbar{display:none}
+  .opt{flex:0 0 auto;min-height:44px;padding:6px 10px;font-size:13px;gap:8px;
+    background:rgba(245,247,250,.8);border-width:2px}
+  .opt:last-child:nth-child(odd){grid-column:auto}
+  .opt.sel{background:rgba(255,255,255,.95)}
+  .sw{width:20px;height:20px}
+  #summary{padding:6px 10px;font-size:12px;margin-bottom:8px;background:rgba(245,247,250,.75);line-height:1.4}
+  #mainBtn{min-height:46px;font-size:16px;box-shadow:0 3px 0 var(--ink)}
+  #banner{background:rgba(255,255,255,.8);font-size:clamp(22px,7vw,40px)}
+  @media (max-height:560px){ #panel{max-height:46vh} }
+
+  /* ---------- Brilho da câmera (imagem clareada) ---------- */
+  :root{--cam-bright:1.5}
+  #arjs-video,body > video{z-index:-2!important;visibility:visible!important;opacity:1!important;
+    filter:brightness(var(--cam-bright)) contrast(1.05) saturate(1.1)!important}
+  a-scene,.a-canvas{background:transparent!important}
+  .tools{display:flex;gap:6px}
+  #sunBtn,#musicBtn,#tableBtn{width:36px;height:36px;border-radius:var(--radius);font-size:15px;cursor:pointer;
+    background:rgba(255,255,255,.8);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none}
+  .tools #sunBtn,.tools #muteBtn,.tools #musicBtn,.tools #tableBtn{pointer-events:auto}
+  #musicBtn.off{opacity:.45}
+  #options{flex-wrap:wrap!important;overflow:visible!important}
+  .opt{min-height:40px;padding:5px 9px;font-size:12.5px;gap:6px}
+  .opt .sw{width:18px;height:18px}
+
+  /* ---------- Tela de permissão da câmera ---------- */
+  #start{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:20px;
+    background:linear-gradient(160deg,#FFFFFF 0%,#F5F7FA 100%);transition:opacity .5s ease}
+  #start.out{opacity:0;pointer-events:none}
+  #start .card{width:100%;max-width:380px;text-align:center;background:var(--white);
+    border:2px solid var(--brown);border-radius:24px;padding:26px 22px;box-shadow:0 6px 0 rgba(74,53,37,.25)}
+  #start .big{width:76px;height:76px;margin:0 auto 10px;border-radius:50%;background:var(--gray);
+    border:2px solid var(--ink);display:grid;place-items:center;font-size:42px}
+  #start h1{margin:0 0 8px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:26px}
+  #start p{margin:0 0 16px;font-weight:700;font-size:15px;line-height:1.45}
+  #start small{display:block;margin-top:14px;font-weight:700;font-size:12px;opacity:.75}
+  #startBtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:var(--radius);
+    background:var(--brown);color:var(--white);font-family:'Fredoka',sans-serif;font-weight:500;font-size:18px;
+    box-shadow:0 4px 0 var(--ink);cursor:pointer}
+  #startBtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  #startBtn:disabled{opacity:.5}
+  #startMsg{margin:12px 0 0!important;font-size:13px!important;color:#8A2B2B}
+  #startMsg:empty{display:none}
+  #markerBtn{width:100%;min-height:46px;margin-top:10px;border:2px solid var(--brown);border-radius:var(--radius);
+    background:var(--white);color:var(--brown);font-family:'Fredoka',sans-serif;font-weight:500;font-size:16px;cursor:pointer}
+  [hidden]{display:none!important}
+  #ver{position:fixed;left:10px;top:calc(env(safe-area-inset-top) + 104px);z-index:1002;font:800 11px 'Nunito',sans-serif;color:#fff;background:rgba(74,53,37,.75);padding:2px 8px;border-radius:999px;pointer-events:none}
+  #markerView{position:fixed;inset:0;z-index:4000;background:#FFFFFF;display:grid;place-items:center;padding:16px;overflow:auto}
+  #markerView .mcard{width:100%;max-width:460px;text-align:center}
+  #markerView img{width:100%;max-width:min(92vw,62vh);height:auto;image-rendering:pixelated;display:block;margin:0 auto}
+  #markerView p{font-weight:700;font-size:14px;line-height:1.45;margin:10px 0 14px}
+  #markerClose{min-height:50px;padding:0 28px;border:2px solid var(--ink);border-radius:var(--radius);background:var(--brown);
+    color:var(--white);font-family:'Fredoka',sans-serif;font-size:17px;box-shadow:0 4px 0 var(--ink);cursor:pointer}
+</style>
+</head>
+
+<body>
+
+<!-- =============== MARCADOR QR (para mostrar em outra tela ou imprimir) =============== -->
+<div id="markerView" hidden>
+  <div class="mcard">
+    <img alt="Marcador QR do jogo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABVAAAAVQCAAAAACIFS6UAAAQv0lEQVR42u3cwXLbMBBEwdmU//+XN9fcVAwWJGh1X6OIEhy/Qi5THQAm/HEEAIIKIKgAggqAoAIIKoCgAggqAIIKIKgAggqAoAIIKoCgAggqAIIKIKgAggogqAAIKoCgAggqAIIKIKgAggogqAAIKoCgAggqgKACIKgAggogqAAIKoCgAggqgKACIKgAggogqAAIKoCgAggqgKACIKgAggogqACCCoCgAggqgKACIKgAggogqACCCoCgAggqgKACCCoAggogqACCCoCgAggqgKACCCoAggogqACCCiCoAAgqgKACCCoAggogqACCCiCoAAgqgKACCCoAggogqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKgKACCCqAoAIIKgCCCiCoAG/389SDy9kDm7QbKoD/8gMgqACCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKIKgACCqAoAIIKgCCCiCoAIIKIKgACCqAoAIIKoCgAiCoAIIKIKgACCqAoAIIKoCgAiCoAIIKIKgACCqAoAIIKoCgAiCoAIIKIKgAggqAoAIIKoCgAiCoAIIKIKgAggqAoAIIKoCgAggqAIIKIKgAggqAoAIIKoCgAggqAIIKIKgAggqAoAIIKoCgAggqAIIKIKgAggogqAAIKoCgAggqAIIKIKgAggogqAAIKoCgAggqgKACIKgAggogqAAIKoCgAggqgKACIKgAggogqACCCoCgAggqgKACIKgAggogqACCCoCgAggqgKACIKgAggogqACCCoCgAggqgKACCCoAggogqACCCoCgAggqgKACCCoAggogqACCCiCoAAgqgKACCCoAggogqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKIKiOAEBQAQQVQFABEFQAQQUQVABBBUBQAQQVQFABEFQAQQUQVABBBUBQ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UAEEFUBQARBUAEEFEFQAQQVAUAEEFUBQARBUAEEFEFQAQQVAUAEEFUBQAQQVAEEFEFQAQQVAUAEEFUBQAQQVAEEFEFQAQQUQVEcAIKgAggogqAAIKoCgAggqgKACIKgAggogqAAIKoCgAggqgKACIKgAggogqACCCoCgAggqgKACIKgAggogqACCCoCgAggqgKACCCoAggogqACCCoCgAggqgKACCCoAggogqACCCoCgAggqgKACCCoAggogqACCCiCoAAgqgKACCCoAggogqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKIKgACCqAoAIIKgCCCiCoAIIKIKgACCqAoAIIKoCgAiCoAIIKIKgACCqAoAIIKoCgAiCoAIIKIKgACCqAoAIIKoCgAiCoAIIKIKgAggqAoAIIKoCgAvCvamcA4IYKIKgAggqAoAIIKoCgAggqAIIKIKgAggqAoAIIKoCgAggqAIIKIKgAggogqAAIKoCgAggqAIIKIKgAggogqAAIKoCgAggqgKACIKgAggogqAAIKoCgAggqgKACIKgAggogqAAIKoCgAggqgKACIKgAggogqACCCoCgAggqgKACIKgAggogqACCCoCgAggqgKACCCoAggogqACCCoCgAggqgKACCCoAggogqACCCiCoAAgqgKACCCoAggogqACCCiCoAAgqgKACCCoAggogqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAAgqgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIgqACCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKgKACCCqAoAIIKgCCCiCoAIIKQJL8BQTaHdZAicTqAAAAAElFTkSuQmCC">
+    <p>Mostre esta imagem <b>inteira</b> (com a moldura preta) em outra tela, ou imprima.<br>Depois aponte a câmera do celular para ela.</p>
+    <button id="markerClose" type="button">Fechar</button>
+  </div>
+</div>
+
+<!-- =============== TELA DE PERMISSÃO DA CÂMERA =============== -->
+<div id="start" role="dialog" aria-labelledby="startTitle">
+  <div class="card">
+    <div class="big">👩‍🍳</div>
+    <h1 id="startTitle">Fatima Confeitaria RA</h1>
+    <p>Para montar o bolo em realidade aumentada, o jogo precisa usar a <b>câmera</b> do seu celular.</p>
+    <button id="startBtn" type="button">📷 Permitir câmera e começar</button>
+    <p id="startMsg" aria-live="polite"></p>
+    <button id="markerBtn" type="button">🔳 Ver o marcador QR</button>
+    <small>Depois, aponte a câmera para o <b>marcador QR</b>.</small>
+    <small style="opacity:.45">versão 11 · QR com o link do jogo</small>
+  </div>
+</div>
+
+<!-- =============== CENA AR (só é criada depois da permissão) =============== -->
+<template id="sceneTpl">
+<a-scene
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  renderer="antialias: true; alpha: true; colorManagement: true"
+  arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;">
+
+  <a-entity light="type: ambient; color: #ffffff; intensity: 0.55"></a-entity>
+  <a-entity light="type: directional; color: #ffffff; intensity: 0.6" position="1 3 2"></a-entity>
+
+  <a-marker id="marker" type="pattern" url="" smooth="true" smoothCount="8" smoothTolerance="0.01" smoothThreshold="6">
+    <a-entity id="world" scale="1.2 1.2 1.2">
+
+
+      <!-- Mesa de cozinha -->
+      <a-box class="tabletop" position="0 0.40 0" width="1.3" height="0.06" depth="0.9" color="#D9B38C"></a-box>
+      <a-cylinder position="-0.55 0.185 -0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+      <a-cylinder position="0.55 0.185 -0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+      <a-cylinder position="-0.55 0.185 0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+      <a-cylinder position="0.55 0.185 0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+
+      <!-- Utensílios -->
+      <!-- tigela -->
+      <a-cylinder position="-0.45 0.48 0.18" radius="0.1" height="0.1" color="#F5F7FA"></a-cylinder>
+      <a-cylinder position="-0.45 0.536 0.18" radius="0.088" height="0.012" color="#E8D2B0"></a-cylinder>
+      <!-- fouet -->
+      <a-cylinder position="-0.40 0.62 0.18" rotation="0 0 20" radius="0.011" height="0.16" color="#4A3525"></a-cylinder>
+      <a-torus position="-0.455 0.53 0.18" rotation="0 90 20" radius="0.03" radius-tubular="0.004" color="#C9CFD8"></a-torus>
+      <!-- rolo de massa -->
+      <a-cylinder position="0.4 0.46 0.27" rotation="0 0 90" radius="0.03" height="0.24" color="#8B5E3C"></a-cylinder>
+      <a-cylinder position="0.4 0.46 0.27" rotation="0 0 90" radius="0.013" height="0.36" color="#4A3525"></a-cylinder>
+      <!-- saco de confeitar -->
+      <a-cone position="0.42 0.49 -0.2" rotation="0 0 -75" radius-bottom="0.06" radius-top="0.006" height="0.22" color="#FFFFFF"></a-cone>
+      <!-- cupcake -->
+      <a-cone position="-0.45 0.46 -0.22" radius-bottom="0.034" radius-top="0.05" height="0.06" color="#4A3525"></a-cone>
+      <a-sphere position="-0.45 0.515 -0.22" radius="0.05" scale="1 0.8 1" color="#F6B7C8"></a-sphere>
+      <a-sphere position="-0.45 0.563 -0.22" radius="0.014" color="#D7263D"></a-sphere>
+
+      <!-- Suporte e prato do bolo -->
+      <a-cylinder position="0 0.46 0" radius="0.05" height="0.06" color="#F5F7FA"></a-cylinder>
+      <a-cylinder position="0 0.5 0" radius="0.33" height="0.02" color="#FFFFFF"></a-cylinder>
+      <a-torus position="0 0.51 0" rotation="90 0 0" radius="0.32" radius-tubular="0.006" color="#4A3525"></a-torus>
+
+      <!-- ====== BOLO (inicia invisível) ====== -->
+      <a-entity id="cake">
+        <!-- Camada 1: massa -->
+        <a-entity id="gBase" visible="false">
+          <a-cylinder class="sponge" position="0 0.55 0" radius="0.25" height="0.08" color="#F3E2A9"></a-cylinder>
+          <a-cylinder position="0 0.6025 0" radius="0.255" height="0.025" color="#FFF6E8"></a-cylinder>
+          <a-cylinder class="sponge" position="0 0.655 0" radius="0.25" height="0.08" color="#F3E2A9"></a-cylinder>
+        </a-entity>
+        <!-- Camada 2: cobertura -->
+        <a-entity id="gFrost" visible="false">
+          <a-cylinder class="frost" position="0 0.715 0" radius="0.262" height="0.04" color="#FFFDF7"></a-cylinder>
+          <a-torus class="frost" position="0 0.735 0" rotation="90 0 0" radius="0.25" radius-tubular="0.018" color="#FFFDF7"></a-torus>
+          <a-entity id="drips"></a-entity>
+        </a-entity>
+        <!-- Camada 3: decoração -->
+        <a-entity id="gDecor" visible="false"></a-entity>
+      </a-entity>
+
+      <a-entity id="confetti"></a-entity>
+
+      <!-- ====== CHEF (cozinheira) ====== -->
+      <a-entity id="chef" position="1.05 0 -0.05" rotation="0 -45 0" scale="0.95 0.95 0.95">
+        <a-entity id="chefBody">
+          <!-- sapatos -->
+          <a-box position="-0.07 0.03 0.03" width="0.09" height="0.06" depth="0.15" color="#5A3A26"></a-box>
+          <a-box position="0.07 0.03 0.03" width="0.09" height="0.06" depth="0.15" color="#5A3A26"></a-box>
+          <!-- calça preta -->
+          <a-cylinder position="-0.07 0.22 0" radius="0.052" height="0.34" color="#1A1A1A"></a-cylinder>
+          <a-cylinder position="0.07 0.22 0" radius="0.052" height="0.34" color="#1A1A1A"></a-cylinder>
+          <!-- dólmã (jaqueta de chef, comprida até o quadril) -->
+          <a-cylinder position="0 0.4338 0" radius="0.1460" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.5413 0" radius="0.1380" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.6488 0" radius="0.1300" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.7563 0" radius="0.1220" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.825 0" radius="0.06" height="0.05" color="#FFFFFF"></a-cylinder>
+          <!-- botões marrons (transpassado) -->
+          <a-sphere position="-0.05 0.74 0.113" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="0.05 0.74 0.113" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="-0.05 0.65 0.118" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="0.05 0.65 0.118" radius="0.014" color="#6B4226"></a-sphere>
+
+          <!-- braços -->
+          <a-entity id="armL" position="-0.15 0.78 0" rotation="0 0 -60">
+            <a-cylinder position="0 -0.1 0" radius="0.037" height="0.2" color="#FFFFFF"></a-cylinder>
+            <a-cylinder position="0 -0.2 0" radius="0.042" height="0.04" color="#F5F7FA"></a-cylinder>
+            <a-cylinder position="0 -0.27 0" radius="0.028" height="0.12" color="#FFE3D0"></a-cylinder>
+          </a-entity>
+          <a-entity id="armR" position="0.15 0.78 0" rotation="0 0 60">
+            <a-cylinder position="0 -0.1 0" radius="0.037" height="0.2" color="#FFFFFF"></a-cylinder>
+            <a-cylinder position="0 -0.2 0" radius="0.042" height="0.04" color="#F5F7FA"></a-cylinder>
+            <a-cylinder position="0 -0.27 0" radius="0.028" height="0.12" color="#FFE3D0"></a-cylinder>
+          </a-entity>
+
+          <a-entity id="chefHead" position="0 0.82 0">
+          <!-- cabeça -->
+          <a-sphere position="0 0.11 0" radius="0.11" color="#FFE3D0" segments-height="18"></a-sphere>
+          <!-- cabelo preto longo -->
+          <a-sphere position="0 0.11 0" radius="0.124" theta-length="72" color="#1A1A1A"></a-sphere>
+          <a-sphere position="0 0.1 -0.03" radius="0.12" color="#1A1A1A"></a-sphere>
+          <a-box position="0 -0.08 -0.14" width="0.24" height="0.44" depth="0.05" color="#1A1A1A"></a-box>
+          <a-box position="-0.118 -0.04 0.02" width="0.04" height="0.36" depth="0.07" color="#1A1A1A"></a-box>
+          <a-box position="0.118 -0.04 0.02" width="0.04" height="0.36" depth="0.07" color="#1A1A1A"></a-box>
+          <!-- olhos castanhos -->
+          <a-sphere id="eyeL" position="-0.04 0.112 0.098" radius="0.022" scale="1 1.25 0.4" color="#6B4226"></a-sphere>
+          <a-sphere id="eyeR" position="0.04 0.112 0.098" radius="0.022" scale="1 1.25 0.4" color="#6B4226"></a-sphere>
+          <a-sphere position="-0.034 0.124 0.105" radius="0.006" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0.046 0.124 0.105" radius="0.006" color="#FFFFFF"></a-sphere>
+          <!-- óculos redondos -->
+          <a-torus position="-0.04 0.112 0.106" radius="0.031" radius-tubular="0.004" color="#1A1A1A"></a-torus>
+          <a-torus position="0.04 0.112 0.106" radius="0.031" radius-tubular="0.004" color="#1A1A1A"></a-torus>
+          <a-box position="0 0.12 0.107" width="0.02" height="0.004" depth="0.004" color="#1A1A1A"></a-box>
+          <!-- bochechas e sorriso -->
+          <a-circle position="-0.066 0.08 0.088" rotation="0 -35 0" radius="0.017" color="#FFA9A9" opacity="0.7" transparent="true"></a-circle>
+          <a-circle position="0.066 0.08 0.088" rotation="0 35 0" radius="0.017" color="#FFA9A9" opacity="0.7" transparent="true"></a-circle>
+          <a-torus position="0 0.073 0.104" rotation="0 0 180" radius="0.012" radius-tubular="0.003" arc="180" color="#8B5E3C"></a-torus>
+
+          <!-- chapéu de chef (toque) -->
+          <a-cylinder position="0 0.21 0" radius="0.118" height="0.07" color="#F5F7FA"></a-cylinder>
+          <a-sphere position="0 0.3 0" radius="0.14" scale="1 0.78 1" color="#FFFFFF"></a-sphere>
+          <a-sphere position="-0.08 0.32 0" radius="0.085" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0.08 0.32 0" radius="0.085" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0 0.35 -0.04" radius="0.09" color="#FFFFFF"></a-sphere>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+
+    </a-entity>
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+</template>
+
+<!-- =============== HUD / INTERFACE =============== -->
+<div id="hud">
+  <div>
+    <div id="top">
+      <div class="brand">
+        <div class="badge">👩‍🍳</div>
+        <div><b>Fatima Confeitaria RA</b><small id="stepLabel">Passo 1 de 4</small></div>
+      </div>
+      <div class="tools">
+        <button id="musicBtn" type="button" aria-label="Ligar ou desligar a música" aria-pressed="true">🎵</button>
+        <button id="tableBtn" type="button" aria-label="Mudar a cor da mesa">🎨</button>
+        <button id="sunBtn" type="button" aria-label="Ajustar brilho da câmera">☀️</button>
+        <button id="muteBtn" type="button" aria-label="Ligar ou desligar o som">🔊</button>
+      </div>
+    </div>
+    <div id="dots"><i class="on"></i><i></i><i></i><i></i></div>
+  </div>
+
+  <div id="hint">📷 Aponte a câmera para o <b>marcador QR</b></div>
+
+  <section id="panel" aria-live="polite">
+    <button id="handle" type="button" aria-label="Minimizar ou expandir painel"></button>
+    <div id="speech">
+      <div class="badge">👩‍🍳</div>
+      <div><h2 id="title"></h2><p id="say"></p></div>
+    </div>
+    <div id="options" role="radiogroup"></div>
+    <div id="summary"></div>
+    <button id="mainBtn" type="button"></button>
+  </section>
+</div>
+<div id="ver">v11</div>
+<div id="banner">🎉 Parabéns! 🎂</div>
+
+<script>
+/* =============== SOM: música de fundo + efeitos (Web Audio API, sem arquivos .mp3) =============== */
+const Sound = (function(){
+  let ctx = null, master = null, musicBus = null, sfxBus = null, noiseBuf = null;
+  let sfxOn = true, musicOn = true, ducked = false;
+  let timer = null, nextTime = 0, stepN = 0, level = 0;
+  const MUSIC_VOL = 0.9, BPM = 100, S16 = 60 / BPM / 4;
+
+  // Melodia de 8 compassos sobre C - G - Am - F - C - G - F - G
+  const CH = [
+    { r:130.81, n:[261.63,329.63,392.00] },
+    { r:98.00,  n:[246.94,293.66,392.00] },
+    { r:110.00, n:[220.00,261.63,329.63] },
+    { r:87.31,  n:[220.00,261.63,349.23] },
+    { r:130.81, n:[261.63,329.63,392.00] },
+    { r:98.00,  n:[246.94,293.66,392.00] },
+    { r:87.31,  n:[220.00,261.63,349.23] },
+    { r:98.00,  n:[246.94,293.66,392.00] }
+  ];
+  const NT = {G4:392.00,A4:440.00,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,B5:987.77,C6:1046.50};
+  const MEL = [
+    [[0,'E5',4],[4,'G5',2],[6,'E5',2],[8,'C5',4],[12,'D5',2],[14,'E5',2]],
+    [[0,'D5',6],[6,'B4',2],[8,'G4',4],[12,'B4',4]],
+    [[0,'C5',4],[4,'E5',2],[6,'A5',2],[8,'G5',4],[12,'E5',4]],
+    [[0,'F5',6],[6,'E5',2],[8,'D5',4],[12,'C5',4]],
+    [[0,'E5',4],[4,'G5',2],[6,'E5',2],[8,'C6',4],[12,'B5',2],[14,'G5',2]],
+    [[0,'A5',4],[4,'G5',4],[8,'D5',4],[12,'E5',2],[14,'D5',2]],
+    [[0,'C5',4],[4,'F5',2],[6,'A5',2],[8,'G5',4],[12,'F5',2],[14,'E5',2]],
+    [[0,'D5',6],[6,'E5',2],[8,'D5',4],[12,'B4',4]]
+  ];
+  const LEAD = MEL.map(bar => { const m = {}; bar.forEach(x => { m[x[0]] = [NT[x[1]], x[2]]; }); return m; });
+
+  function init(){
+    if(ctx){ if(ctx.state === 'suspended') ctx.resume(); return ctx; }
+    const A = window.AudioContext || window.webkitAudioContext;
+    if(!A) return null;
+    ctx = new A();
+    const comp = ctx.createDynamicsCompressor();
+    master = ctx.createGain(); master.gain.value = 0.9;
+    master.connect(comp); comp.connect(ctx.destination);
+    musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? MUSIC_VOL : 0; musicBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return ctx;
+  }
+
+  function tone(f, t, d, type, v, bus, o){
+    o = o || {};
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    const a = Math.min(o.a || 0.01, d * 0.5);
+    osc.type = type; osc.frequency.setValueAtTime(f, t);
+    if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + d);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    osc.connect(g); g.connect(bus);
+    osc.start(t); osc.stop(t + d + 0.05);
+  }
+  function noise(t, d, v, bus, f0, f1, type){
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+    const flt = ctx.createBiquadFilter(); flt.type = type || 'highpass';
+    flt.frequency.setValueAtTime(f0, t);
+    if(f1) flt.frequency.exponentialRampToValueAtTime(f1, t + d);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t + Math.min(0.01, d * 0.4));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    src.connect(flt); flt.connect(g); g.connect(bus);
+    src.start(t, Math.random() * 0.5); src.stop(t + d + 0.05);
+  }
+
+  /* ----- música de fundo (loop de 8 compassos; ganha camadas a cada passo do jogo) ----- */
+  function playStep(s, t){
+    const bar = (s >> 4) & 7, i = s & 15, c = CH[bar];
+    // base suave
+    if(i === 0) c.n.forEach(f => tone(f, t, S16 * 15.5, 'sine', 0.045, musicBus, {a:0.2}));
+    // baixo (com a oitava acima, para soar no alto-falante do celular)
+    if(i === 0 || i === 8){
+      const f = i === 0 ? c.r : c.r * 1.5;
+      tone(f, t, S16 * 7, 'triangle', 0.16, musicBus);
+      tone(f * 2, t, S16 * 5, 'sine', 0.07, musicBus);
+    }
+    // melodia (timbre de marimba / caixinha de música)
+    const m = LEAD[bar][i];
+    if(m){
+      const d = m[1] * S16 * 1.15;
+      tone(m[0], t, d, 'sine', 0.17, musicBus, {a:0.006});
+      tone(m[0] * 2, t, d * 0.6, 'triangle', 0.04, musicBus, {a:0.004});
+    }
+    if(level >= 1){
+      if(i === 6 || i === 14) c.n.forEach(f => tone(f, t, S16 * 1.6, 'triangle', 0.035, musicBus, {a:0.004}));
+      if(i % 2 === 0) noise(t, 0.04, 0.02, musicBus, 7500);
+    }
+    if(level >= 2){
+      if(i === 0 || i === 8) tone(150, t, 0.14, 'sine', 0.28, musicBus, {to:55, a:0.003});
+      if(i % 4 === 2) noise(t, 0.03, 0.014, musicBus, 9500);
+      if(i === 0 && (bar & 1) === 0) tone(c.n[2] * 4, t, S16 * 6, 'sine', 0.03, musicBus, {a:0.01});
+    }
+  }
+  function schedule(){
+    if(!ctx) return;
+    if(nextTime < ctx.currentTime - 0.1) nextTime = ctx.currentTime + 0.05;
+    while(nextTime < ctx.currentTime + 0.3){
+      playStep(stepN, nextTime);
+      nextTime += S16; stepN = (stepN + 1) % 128;
+    }
+  }
+  function startMusic(){
+    init(); if(!ctx || timer) return;
+    nextTime = ctx.currentTime + 0.15; stepN = 0;
+    timer = setInterval(schedule, 60);
+  }
+  function setMusicGain(){
+    if(musicBus) musicBus.gain.setTargetAtTime(musicOn ? (ducked ? 0.18 : MUSIC_VOL) : 0, ctx.currentTime, 0.15);
+  }
+
+  /* ----- efeitos sonoros ----- */
+  const ok = () => ctx && sfxOn;
+  const now = () => ctx.currentTime;
+
+  const api = {
+    unlock(){ return init(); },
+    startMusic,
+    setLevel(n){ level = n; },
+    duck(on){ ducked = on; setMusicGain(); },
+    toggleSfx(){ sfxOn = !sfxOn; return sfxOn; },
+    toggleMusic(){ musicOn = !musicOn; if(ctx) setMusicGain(); return musicOn; },
+    pause(h){ if(!ctx) return; if(h) ctx.suspend(); else ctx.resume(); },
+
+    tick(){ if(!ok()) return; tone(1000, now(), 0.04, 'square', 0.04, sfxBus); },
+    select(i){
+      if(!ok()) return; const f = 520 + (i || 0) * 80;
+      tone(f, now(), 0.1, 'sine', 0.2, sfxBus, {to:f * 1.5});
+    },
+    confirm(){
+      if(!ok()) return; const t = now();
+      [523.25, 659.25, 783.99].forEach((f, k) => tone(f, t + k * 0.07, 0.18, 'triangle', 0.16, sfxBus));
+      tone(1046.5, t + 0.21, 0.3, 'sine', 0.1, sfxBus);
+    },
+    drop(durMs){
+      if(!ok()) return; const t = now(), d = (durMs || 750) / 1000;
+      tone(900, t, 0.4, 'sine', 0.07, sfxBus, {to:220});
+      noise(t, 0.35, 0.04, sfxBus, 3000, 500, 'bandpass');
+      [[0.3636, 0.3], [0.7273, 0.15], [0.909, 0.08]].forEach(b => {
+        const tt = t + d * b[0];
+        tone(240, tt, 0.16, 'sine', b[1], sfxBus, {to:90});
+        noise(tt, 0.06, b[1] * 0.25, sfxBus, 900, null, 'lowpass');
+      });
+    },
+    sparkle(){
+      if(!ok()) return; const t = now(), N = [1047, 1175, 1319, 1568, 1760, 2093];
+      for(let k = 0; k < 8; k++) tone(N[(Math.random() * N.length) | 0], t + k * 0.06, 0.18, 'sine', 0.08, sfxBus);
+    },
+    whoosh(){
+      if(!ok()) return; const t = now();
+      noise(t, 0.4, 0.08, sfxBus, 300, 3500, 'bandpass');
+      tone(300, t, 0.4, 'sine', 0.05, sfxBus, {to:900});
+    },
+    bell(){
+      if(!ok()) return; const t = now();
+      [0, 0.28].forEach(o => {
+        tone(1760, t + o, 1.1, 'sine', 0.18, sfxBus);
+        tone(2637, t + o, 0.7, 'sine', 0.06, sfxBus);
+      });
+    },
+    boing(){ if(!ok()) return; tone(220, now(), 0.28, 'triangle', 0.22, sfxBus, {to:660}); },
+    pop(){
+      if(!ok()) return; const t = now();
+      noise(t, 0.05, 0.1, sfxBus, 2500);
+      tone(1400 + Math.random() * 600, t, 0.08, 'sine', 0.1, sfxBus, {to:500});
+    },
+    found(){
+      if(!ok()) return; const t = now();
+      tone(784, t, 0.2, 'sine', 0.15, sfxBus); tone(1175, t + 0.1, 0.3, 'sine', 0.12, sfxBus);
+    },
+    lost(){ if(!ok()) return; tone(500, now(), 0.25, 'sine', 0.1, sfxBus, {to:300}); },
+    victory(){
+      if(!ok()) return; const t = now();
+      api.duck(true); setTimeout(() => api.duck(false), 4500);
+      [[523.25,0,.14],[659.25,.15,.14],[783.99,.30,.14],[1046.5,.45,.30],
+       [783.99,.80,.12],[1046.5,.92,.12],[1318.5,1.04,.55]]
+        .forEach(m => tone(m[0], t + m[1], m[2], 'triangle', 0.2, sfxBus));
+      [523.25, 659.25, 783.99, 1046.5].forEach(f => tone(f, t + 1.04, 0.9, 'triangle', 0.06, sfxBus, {a:0.05}));
+      tone(392, t, 0.4, 'sine', 0.1, sfxBus); tone(523.25, t + 0.45, 0.3, 'sine', 0.1, sfxBus);
+      noise(t + 1.0, 1.4, 0.05, sfxBus, 1500, 2500, 'bandpass');   // "ooooh" da plateia
+      [2093, 2349, 2637, 3136].forEach((f, k) => tone(f, t + 1.6 + k * 0.07, 0.12, 'sine', 0.06, sfxBus));
+    }
+  };
+  return api;
+})();
+['pointerdown', 'touchend', 'click'].forEach(ev =>
+  document.addEventListener(ev, () => { Sound.unlock(); Sound.startMusic(); }, {passive:true}));
+</script>
+<script>
+function initGame(){
+  'use strict';
+
+  /* ---------------- Dados do jogo ---------------- */
+  const STEPS = [
+    { title:'1. Escolha a massa', say:'Qual sabor vamos assar hoje?', key:'massa',
+      options:[
+        {id:'baunilha', label:'Baunilha',      color:'#F3E2A9'},
+        {id:'chocolate',label:'Chocolate',     color:'#6B3E26'},
+        {id:'morango',  label:'Morango',       color:'#F4A6B8'},
+        {id:'redvelvet',label:'Red Velvet',    color:'#A3182E'},
+        {id:'cenoura',  label:'Cenoura',       color:'#E8943A'},
+        {id:'limao',    label:'Limão',         color:'#EEE46B'},
+        {id:'doceleite',label:'Doce de Leite', color:'#C98A4B'},
+        {id:'matcha',   label:'Chá Verde',     color:'#9CC47B'}
+      ]},
+    { title:'2. Escolha a cobertura', say:'Agora a cobertura, que tal?', key:'cobertura',
+      options:[
+        {id:'chantilly',  label:'Chantilly',         color:'#FFFDF7'},
+        {id:'chocoescuro',label:'Chocolate Escuro',  color:'#3B2417'},
+        {id:'limao',      label:'Ganache de Limão',  color:'#D6E86A'},
+        {id:'sky',        label:'Ganache Azul Sky',  color:'#8EC9F0'},
+        {id:'rosa',       label:'Glacê de Morango',  color:'#F7A8C4'},
+        {id:'doceleite',  label:'Doce de Leite',     color:'#C98A4B'},
+        {id:'matcha',     label:'Chá Verde',         color:'#A8D08D'},
+        {id:'lavanda',    label:'Lavanda',           color:'#C9B6F0'},
+        {id:'caramelo',   label:'Caramelo',          color:'#B8742C'}
+      ]},
+    { title:'3. Decore o bolo', say:'Escolha uma ou mais decorações!', key:'decoracao', multi:true,
+      options:[
+        {id:'granulados', label:'Granulados',         color:'#FF8FB1'},
+        {id:'flores',     label:'Flores de Chantilly',color:'#FFFFFF'},
+        {id:'morangos',   label:'Morangos',           color:'#E63950'},
+        {id:'cerejas',    label:'Cerejas',            color:'#B5122E'},
+        {id:'velinhas',   label:'Velinhas',           color:'#FFD93D'},
+        {id:'brigadeiros',label:'Brigadeiros',        color:'#4A2C1A'},
+        {id:'macarons',   label:'Macarons',           color:'#F6B7E0'},
+        {id:'estrelas',   label:'Estrelas Douradas',  color:'#FFC93C'},
+        {id:'perolas',    label:'Pérolas de Açúcar',  color:'#F5F7FA'},
+        {id:'bandeira',   label:'Bandeira do Brasil', color:'#009C3B'},
+        {id:'completo',   label:'Estilo Completo',    color:'#FFB347'}
+      ]}
+  ];
+
+  const $ = s => document.querySelector(s);
+  const state = { step:0, selected:null, choice:{} };
+
+  const el = {
+    title:$('#title'), say:$('#say'), options:$('#options'), summary:$('#summary'),
+    main:$('#mainBtn'), dots:[...document.querySelectorAll('#dots i')], stepLabel:$('#stepLabel'),
+    hint:$('#hint'), banner:$('#banner'), mute:$('#muteBtn'),
+    gBase:$('#gBase'), gFrost:$('#gFrost'), gDecor:$('#gDecor'),
+    drips:$('#drips'), confetti:$('#confetti'),
+    chefBody:$('#chefBody'), armL:$('#armL'), armR:$('#armR'),
+    head:$('#chefHead'), eyeL:$('#eyeL'), eyeR:$('#eyeR')
+  };
+
+  /* ---------------- Áudio (usa o módulo Sound definido acima) ---------------- */
+  el.mute.addEventListener('click', () => {
+    Sound.unlock();
+    const on = Sound.toggleSfx();
+    el.mute.textContent = on ? '🔊' : '🔇';
+    if(on) Sound.tick();
+  });
+  const musicBtn = $('#musicBtn');
+  musicBtn.addEventListener('click', () => {
+    Sound.unlock();
+    const on = Sound.toggleMusic();
+    musicBtn.classList.toggle('off', !on);
+    musicBtn.setAttribute('aria-pressed', String(on));
+    if(on) Sound.tick();
+  });
+  document.addEventListener('visibilitychange', () => Sound.pause(document.hidden));
+
+  /* ---------------- Utilidades 3D ---------------- */
+  function make(parent, tag, attrs){
+    const e = document.createElement(tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    parent.appendChild(e); return e;
+  }
+  function paint(sel, color){
+    document.querySelectorAll(sel).forEach(e => e.setAttribute('color', color));
+  }
+  function easeOutBounce(x){
+    const n1 = 7.5625, d1 = 2.75;
+    if(x < 1/d1) return n1*x*x;
+    if(x < 2/d1) return n1*(x -= 1.5/d1)*x + .75;
+    if(x < 2.5/d1) return n1*(x -= 2.25/d1)*x + .9375;
+    return n1*(x -= 2.625/d1)*x + .984375;
+  }
+  // camada "cai" sobre o bolo
+  function drop(group, h, dur){
+    group.setAttribute('visible', true);
+    Sound.drop(dur);
+    const token = {}; group.__tw = token;
+    const t0 = performance.now();
+    (function step(now){
+      if(group.__tw !== token) return;
+      const k = Math.min(1, (now - t0) / dur);
+      group.object3D.position.y = h * (1 - easeOutBounce(k));
+      if(k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  function hideGroup(group){
+    group.__tw = null;
+    group.object3D.position.y = 0;
+    group.setAttribute('visible', false);
+  }
+
+  // pingos da cobertura (gerados uma vez)
+  (function buildDrips(){
+    const n = 14;
+    for(let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2;
+      const L = 0.05 + ((i * 37) % 7) / 7 * 0.07;
+      const x = Math.cos(a) * 0.256, z = Math.sin(a) * 0.256;
+      make(el.drips, 'a-cylinder', { class:'frost', position:`${x} ${0.705 - L/2} ${z}`, radius:'0.022', height:L, color:'#FFFDF7' });
+      make(el.drips, 'a-sphere',   { class:'frost', position:`${x} ${0.705 - L} ${z}`,  radius:'0.022', color:'#FFFDF7' });
+    }
+  })();
+
+  /* ---------------- Decorações ---------------- */
+  const CONFETTI_COLORS = ['#FF6B9D','#FFD93D','#6BCB77','#4D96FF','#B983FF','#FF9F45'];
+  const PASTEL = ['#F6B7E0','#BFE3D0','#BBD9F2','#FBE7A1','#F7C6A8','#D9C2F2'];
+  const CANDLE = ['#FF8FB1','#7FD1AE','#8EC9F0','#FFD93D','#C9B6F0'];
+  const RING_TYPES = ['flores','morangos','cerejas','velinhas','brigadeiros','macarons'];
+  const TOP = 0.745;                       // altura da superfície da cobertura
+
+  function addSprinkles(count, rMin, rMax){
+    for(let i = 0; i < count; i++){
+      const r = rMin + Math.random() * (rMax - rMin), a = Math.random() * Math.PI * 2;
+      make(el.gDecor, 'a-box', {
+        position:`${Math.cos(a)*r} ${TOP + 0.003} ${Math.sin(a)*r}`,
+        rotation:`0 ${Math.random()*180} 0`,
+        width:'0.045', height:'0.012', depth:'0.012',
+        color: CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0]
+      });
+    }
+  }
+  function addStars(count, rMin, rMax){
+    for(let i = 0; i < count; i++){
+      const r = rMin + Math.random() * (rMax - rMin), a = Math.random() * Math.PI * 2;
+      make(el.gDecor, 'a-octahedron', {
+        position:`${Math.cos(a)*r} ${TOP + 0.03} ${Math.sin(a)*r}`,
+        radius:'0.02', color:'#FFC93C',
+        animation:'property: rotation; to: 0 360 0; loop: true; dur: 3200; easing: linear'
+      });
+    }
+  }
+  function addPearls(){
+    const n = 26;
+    for(let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2;
+      make(el.gDecor, 'a-sphere', { position:`${Math.cos(a)*0.262} 0.527 ${Math.sin(a)*0.262}`, radius:'0.013', color:'#FFFFFF' });
+    }
+  }
+  function addCenterCherry(x, z){
+    make(el.gDecor, 'a-sphere', { position:`${x} ${TOP + 0.02} ${z}`, radius:'0.05', scale:'1 0.7 1', color:'#FFFDF7' });
+    make(el.gDecor, 'a-sphere', { position:`${x} ${TOP + 0.075} ${z}`, radius:'0.04', color:'#D7263D' });
+    make(el.gDecor, 'a-cylinder', { position:`${x + 0.012} ${TOP + 0.14} ${z}`, rotation:'0 0 -18', radius:'0.004', height:'0.08', color:'#4A3525' });
+  }
+
+  // Topper: haste com a bandeira do Brasil (verde, losango amarelo, círculo azul com faixa branca)
+  function addFlagTopper(x, z){
+    const g = make(el.gDecor, 'a-entity', { position:`${x} ${TOP} ${z}` });
+    make(g, 'a-cylinder', { position:'0 0.1 0', radius:'0.004', height:'0.2', color:'#F5F7FA' });
+    make(g, 'a-sphere',   { position:'0 0.206 0', radius:'0.008', color:'#FFC93C' });
+    const f = make(g, 'a-entity', { position:'0 0.13 0',
+      animation:'property: rotation; from: 0 -12 0; to: 0 12 0; dir: alternate; dur: 1500; loop: true; easing: easeInOutSine' });
+    make(f, 'a-box', { position:'0.1 0 0', width:'0.2', height:'0.14', depth:'0.004', color:'#009C3B' });
+    [1, -1].forEach(s => {                       // emblema nos dois lados da bandeira
+      const rh = make(f, 'a-entity', { position:`0.1 0 ${0.007 * s}`, scale:'1.46 1 1' });
+      make(rh, 'a-box', { rotation:'0 0 45', width:'0.0792', height:'0.0792', depth:'0.004', color:'#FFDF00' });
+      make(f, 'a-cylinder', { position:`0.1 0 ${0.013 * s}`, rotation:'90 0 0', radius:'0.029', height:'0.004', color:'#002776' });
+      make(f, 'a-box', { position:`0.1 0 ${0.019 * s}`, rotation:'0 0 -12', width:'0.056', height:'0.006', depth:'0.002', color:'#FFFFFF' });
+    });
+  }
+
+  function ringItem(type, g, k){
+    const col = PASTEL[k % PASTEL.length];
+    if(type === 'flores'){
+      for(let p = 0; p < 6; p++){
+        const pa = (p / 6) * Math.PI * 2;
+        make(g, 'a-sphere', { position:`${Math.cos(pa)*0.03} 0.006 ${Math.sin(pa)*0.03}`, radius:'0.023', scale:'1 0.7 1', color:'#FFFFFF' });
+      }
+      make(g, 'a-sphere', { position:'0 0.015 0', radius:'0.02', color:'#FFD76B' });
+      make(g, 'a-sphere', { position:'0.055 0 0.02',   radius:'0.018', scale:'1 0.35 0.6', color:'#8FD19E' });
+      make(g, 'a-sphere', { position:'-0.055 0 -0.02', radius:'0.018', scale:'1 0.35 0.6', color:'#8FD19E' });
+    } else if(type === 'morangos'){
+      make(g, 'a-sphere', { position:'0 0.012 0', radius:'0.032', scale:'1 0.6 1', color:'#FFFDF7' });
+      make(g, 'a-sphere', { position:'0 0.05 0',  radius:'0.034', scale:'0.9 1.2 0.9', color:'#E63950' });
+      make(g, 'a-sphere', { position:'0 0.088 0', radius:'0.02',  scale:'1.3 0.3 1.3', color:'#4FAF68' });
+      for(let s = 0; s < 5; s++){
+        make(g, 'a-sphere', { position:`${Math.cos(s*1.3)*0.028} ${0.036 + (s%2)*0.02} ${Math.sin(s*1.3)*0.028}`, radius:'0.004', color:'#FFE066' });
+      }
+    } else if(type === 'cerejas'){
+      make(g, 'a-sphere', { position:'0 0.012 0', radius:'0.032', scale:'1 0.6 1', color:'#FFFDF7' });
+      make(g, 'a-sphere', { position:'0 0.055 0', radius:'0.03', color:'#C1121F' });
+      make(g, 'a-sphere', { position:'-0.01 0.066 0.014', radius:'0.007', color:'#FFFFFF' });
+      make(g, 'a-cylinder', { position:'0.008 0.1 0', rotation:'0 0 -15', radius:'0.0025', height:'0.05', color:'#4A3525' });
+    } else if(type === 'velinhas'){
+      make(g, 'a-cylinder', { position:'0 0.04 0', radius:'0.009', height:'0.08', color: CANDLE[k % CANDLE.length] });
+      make(g, 'a-sphere', { position:'0 0.097 0', radius:'0.012', scale:'1 1.6 1', color:'#FFB02E',
+        animation:'property: scale; from: 1 1.4 1; to: 1.3 2 1.3; dir: alternate; dur: 280; loop: true; easing: easeInOutSine' });
+    } else if(type === 'brigadeiros'){
+      make(g, 'a-sphere', { position:'0 0.028 0', radius:'0.03', color:'#4A2C1A' });
+      for(let s = 0; s < 5; s++){
+        make(g, 'a-box', { position:`${(Math.random()-.5)*0.04} ${0.048 + Math.random()*0.012} ${(Math.random()-.5)*0.04}`,
+          rotation:`0 ${Math.random()*180} 0`, width:'0.012', height:'0.004', depth:'0.004',
+          color: CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0] });
+      }
+    } else {  // macarons
+      make(g, 'a-cylinder', { position:'0 0.012 0', radius:'0.036', height:'0.014', color:col });
+      make(g, 'a-cylinder', { position:'0 0.024 0', radius:'0.03',  height:'0.012', color:'#FFFDF7' });
+      make(g, 'a-cylinder', { position:'0 0.036 0', radius:'0.036', height:'0.014', color:col });
+    }
+  }
+
+  function buildDecor(sel){
+    el.gDecor.innerHTML = '';
+    const has = new Set(sel);
+    if(has.has('completo')) ['granulados','flores','cerejas','perolas'].forEach(x => has.add(x));
+    const ring = RING_TYPES.filter(k => has.has(k));
+    const N = ring.length > 4 ? 12 : 8, R = 0.19;
+    for(let i = 0; ring.length && i < N; i++){
+      const a = (i / N) * Math.PI * 2 + 0.2;
+      const g = make(el.gDecor, 'a-entity', { position:`${Math.cos(a)*R} ${TOP} ${Math.sin(a)*R}` });
+      ringItem(ring[i % ring.length], g, i);
+    }
+    const inner = ring.length ? 0.12 : 0.23;
+    if(has.has('granulados')) addSprinkles(ring.length ? 30 : 60, 0.02, inner);
+    if(has.has('estrelas'))   addStars(ring.length ? 7 : 14, 0.03, inner);
+    const flag = has.has('bandeira');
+    if(flag)                  addFlagTopper(-0.04, -0.02);
+    if(has.has('cerejas'))    addCenterCherry(flag ? 0.08 : 0, flag ? 0.06 : 0);
+    if(has.has('perolas'))    addPearls();
+  }
+
+  /* ---------------- Confete e animação (loop) ---------------- */
+  const JUMP_DUR = 2600;
+  let jumpT0 = null, lastT = performance.now(), lastJump = -1;
+  const confetti = [];
+
+  function spawnConfetti(){
+    for(let i = 0; i < 40; i++){
+      const e = make(el.confetti, 'a-box', {
+        position:`${(Math.random()-.5)*1.4} ${1.0+Math.random()*0.8} ${(Math.random()-.5)*1.2}`,
+        width:'0.035', height:'0.035', depth:'0.006',
+        color: CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0]
+      });
+      const p = { e, ready:false, vy:0.35+Math.random()*0.45, sp:(Math.random()-.5)*8 };
+      e.addEventListener('loaded', () => { p.ready = true; });
+      confetti.push(p);
+    }
+  }
+  function clearConfetti(){ confetti.length = 0; el.confetti.innerHTML = ''; }
+
+  function loop(now){
+    const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    const D = Math.PI / 180;
+    if(!el.chefBody.object3D || !el.head.object3D || !el.armL.object3D || !el.armR.object3D || !el.eyeL.object3D || !el.eyeR.object3D){
+      requestAnimationFrame(loop); return;
+    }
+    const T = now / 1000;
+    let angL = 60 + Math.sin(T * 1.3) * 4;              // braços balançam de leve
+    let angR = 60 + Math.sin(T * 1.3 + 1.6) * 4;
+    let bodyY = Math.sin(T * 1.7) * 0.008;              // respiração
+    let jumping = false;
+
+    // aceno suave com a mão direita a cada ~9 segundos
+    const wp = (T % 9) / 1.8;
+    if(wp < 1){ angR = 60 + Math.sin(wp * Math.PI) * (36 + Math.sin(T * 10) * 7); }
+
+    if(jumpT0 !== null){
+      const t = now - jumpT0;
+      if(t >= JUMP_DUR){ jumpT0 = null; }
+      else {
+        const s = Math.abs(Math.sin((t / JUMP_DUR) * Math.PI * 5));
+        jumping = true;
+        bodyY = s * 0.32;
+        const kj = Math.floor(t / (JUMP_DUR / 5));
+        if(kj !== lastJump){ lastJump = kj; Sound.boing(); Sound.pop(); }
+        angL = angR = 60 + s * 85;                      // braços para cima ao pular
+      }
+    }
+    const cb = el.chefBody.object3D;
+    cb.position.y = bodyY;
+    cb.rotation.y = Math.sin(T * 0.55) * 0.14;          // corpo gira devagar
+    cb.rotation.z = jumping ? 0 : Math.sin(T * 0.9) * 0.03;   // balanço lateral
+    cb.scale.y = 1 + Math.sin(T * 1.7) * 0.007;
+    const hd = el.head.object3D;                        // cabeça inclina e olha em volta
+    hd.rotation.z = Math.sin(T * 1.1) * 0.06;
+    hd.rotation.x = Math.sin(T * 0.8 + 1) * 0.04;
+    hd.rotation.y = Math.sin(T * 0.7) * 0.16;
+    const bl = (T % 3.8) > 3.65 ? 0.1 : 1;              // piscar
+    el.eyeL.object3D.scale.y = 1.25 * bl;
+    el.eyeR.object3D.scale.y = 1.25 * bl;
+    el.armL.object3D.rotation.z = -angL * D;
+    el.armR.object3D.rotation.z =  angR * D;
+
+    for(let i = confetti.length - 1; i >= 0; i--){
+      const p = confetti[i];
+      if(!p.ready) continue;
+      const o = p.e.object3D;
+      o.position.y -= p.vy * dt;
+      o.rotation.x += p.sp * dt; o.rotation.z += p.sp * 0.6 * dt;
+      if(o.position.y < 0.02){ p.e.remove(); confetti.splice(i, 1); }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  function celebrate(){
+    Sound.bell(); Sound.victory(); lastJump = -1;
+    spawnConfetti();
+    jumpT0 = performance.now();
+    el.banner.classList.add('show');
+    setTimeout(() => el.banner.classList.remove('show'), 2800);
+  }
+
+  /* ---------------- Interface ---------------- */
+  function labelOf(stepIdx, id){
+    const o = STEPS[stepIdx].options.find(x => x.id === id);
+    return o ? o.label : '-';
+  }
+  function hasSelection(){
+    const st = STEPS[state.step]; if(!st) return false;
+    return st.multi ? (state.selected || []).length > 0 : !!state.selected;
+  }
+
+  function render(){
+    const s = state.step;
+    el.dots.forEach((d, i) => d.classList.toggle('on', i <= Math.min(s, 3)));
+    el.stepLabel.textContent = (s < 4 ? `Passo ${s + 1} de 4` : 'Bolo pronto!') + ' · v11';
+    el.options.innerHTML = '';
+    el.summary.classList.remove('on');
+
+    if(s < 3){
+      const st = STEPS[s];
+      if(st.multi && !Array.isArray(state.selected)) state.selected = [];
+      el.title.textContent = st.title;
+      el.say.textContent = st.say;
+      st.options.forEach(o => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.dataset.id = o.id;
+        b.setAttribute('role', st.multi ? 'checkbox' : 'radio'); b.setAttribute('aria-checked', 'false');
+        b.innerHTML = `<span class="sw" style="background:${o.color}"></span><span>${o.label}</span>`;
+        b.addEventListener('click', () => select(o.id));
+        el.options.appendChild(b);
+      });
+      el.main.textContent = 'Confirmar ✔';
+      el.main.disabled = !hasSelection();
+    } else if(s === 3){
+      el.title.textContent = '4. Finalização';
+      el.say.textContent = 'Tudo pronto! Vamos comemorar?';
+      showSummary();
+      el.main.textContent = 'Finalizar bolo 🎉';
+      el.main.disabled = false;
+    } else {
+      el.title.textContent = 'Parabéns, confeiteiro(a)!';
+      el.say.textContent = 'Seu bolo ficou uma delícia!';
+      showSummary();
+      el.main.textContent = 'Fazer Outro Bolo 🔄';
+      el.main.disabled = false;
+    }
+  }
+  function showSummary(){
+    const c = state.choice;
+    const dec = (c.decoracao || []).map(id => labelOf(2, id)).join(', ') || '-';
+    el.summary.innerHTML =
+      `🍰 Massa: <b>${labelOf(0, c.massa)}</b><br>` +
+      `🍫 Cobertura: <b>${labelOf(1, c.cobertura)}</b><br>` +
+      `✨ Decoração: <b>${dec}</b>`;
+    el.summary.classList.add('on');
+  }
+  function select(id){
+    const st = STEPS[state.step];
+    if(st.multi){
+      const k = state.selected.indexOf(id);
+      if(k >= 0) state.selected.splice(k, 1); else state.selected.push(id);
+    } else {
+      state.selected = id;
+    }
+    el.options.querySelectorAll('.opt').forEach(b => {
+      const on = st.multi ? state.selected.indexOf(b.dataset.id) >= 0 : b.dataset.id === state.selected;
+      b.classList.toggle('sel', on); b.setAttribute('aria-checked', String(on));
+    });
+    el.main.disabled = !hasSelection();
+    const idx = st.options.findIndex(o => o.id === id);
+    Sound.select(idx < 0 ? 0 : idx);
+  }
+
+  function applyStep(){
+    const s = state.step, st = STEPS[s], sel = state.selected;
+    if(st.multi){
+      state.choice[st.key] = sel.slice();
+      buildDecor(sel);
+      drop(el.gDecor, 0.4, 700);
+      setTimeout(() => Sound.sparkle(), 450);
+    } else {
+      const color = st.options.find(o => o.id === sel).color;
+      state.choice[st.key] = sel;
+      if(s === 0){ paint('.sponge', color); drop(el.gBase, 0.45, 750); }
+      if(s === 1){ paint('.frost', color);  drop(el.gFrost, 0.45, 750); }
+    }
+    Sound.setLevel(Math.min(2, s + 1));
+  }
+
+  el.main.addEventListener('click', () => {
+    Sound.unlock();
+    if(state.step < 3){
+      if(!hasSelection()) return;
+      Sound.confirm(); applyStep();
+      state.step++; state.selected = null; render();
+    } else if(state.step === 3){
+      celebrate();
+      state.step = 4; render();
+    } else {
+      resetAll();
+    }
+  });
+
+  function resetAll(){
+    jumpT0 = null;
+    clearConfetti();
+    el.banner.classList.remove('show');
+    [el.gBase, el.gFrost, el.gDecor].forEach(hideGroup);
+    el.gDecor.innerHTML = '';
+    paint('.sponge', '#F3E2A9');
+    paint('.frost', '#FFFDF7');
+    state.step = 0; state.selected = null; state.choice = {};
+    Sound.whoosh(); Sound.setLevel(0);
+    render();
+  }
+
+  /* ---------------- Marcador ---------------- */
+  const marker = $('#marker');
+  const HINT_DEFAULT = '📷 Aponte a câmera para o <b>marcador QR</b>';
+  const warn = msg => { el.hint.innerHTML = msg; el.hint.classList.remove('hide'); };
+
+  // A interface só aparece depois que o marcador for lido pela primeira vez
+  let lastSnd = 0;
+  marker.addEventListener('markerFound', () => {
+    document.body.classList.add('ready');
+    el.hint.classList.add('hide');
+    const n = performance.now(); if(n - lastSnd > 2000){ Sound.found(); lastSnd = n; }
+  });
+  marker.addEventListener('markerLost', () => {
+    el.hint.innerHTML = HINT_DEFAULT;
+    el.hint.classList.remove('hide');
+    const n = performance.now(); if(n - lastSnd > 2000){ Sound.lost(); lastSnd = n; }
+  });
+
+  // Diagnóstico da câmera
+  if(!window.isSecureContext || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+    warn('⚠️ A câmera só abre em link <b>HTTPS</b> no Chrome/Safari (não como arquivo local).');
+  }
+  window.addEventListener('camera-error', () =>
+    warn('📷 Não consegui abrir a câmera. Permita o acesso nas configurações do navegador e recarregue.'));
+
+  // Minimizar / expandir painel
+  $('#handle').addEventListener('click', () => { Sound.tick(); $('#panel').classList.toggle('min'); });
+
+  // Cor da mesa: toque no 🎨 para trocar
+  const TABLE_COLORS = ['#D9B38C', '#FFFFFF', '#BFE3D0', '#BBD9F2', '#FBE7A1'];
+  let tc = 0;
+  $('#tableBtn').addEventListener('click', () => {
+    Sound.tick();
+    tc = (tc + 1) % TABLE_COLORS.length;
+    document.querySelectorAll('.tabletop').forEach(e => e.setAttribute('color', TABLE_COLORS[tc]));
+  });
+
+  // Brilho da câmera: toque no ☀️ para clarear ou escurecer a imagem
+  const LEVELS = [1.0, 1.5, 2.0, 2.6];
+  let lv = 1;
+  $('#sunBtn').addEventListener('click', () => {
+    Sound.tick();
+    lv = (lv + 1) % LEVELS.length;
+    document.documentElement.style.setProperty('--cam-bright', LEVELS[lv]);
+    el.hint.innerHTML = '☀️ Brilho da câmera: nível ' + (lv + 1) + ' de ' + LEVELS.length;
+    el.hint.classList.remove('hide');
+    clearTimeout(window.__sunT);
+    window.__sunT = setTimeout(() => { if(document.body.classList.contains('ready')) el.hint.classList.add('hide'); }, 1400);
+  });
+
+  // Proteção: esconde qualquer peça da cozinheira que apareça grande demais (ex.: disco)
+  function guardChef(){
+    document.querySelectorAll('#chef *').forEach(e => {
+      const m = e.getObject3D && e.getObject3D('mesh');
+      if(!m || !m.geometry) return;
+      m.geometry.computeBoundingBox();
+      const b = m.geometry.boundingBox, s = e.object3D.scale;
+      const big = Math.max((b.max.x - b.min.x) * s.x, (b.max.y - b.min.y) * s.y, (b.max.z - b.min.z) * s.z);
+      if(big > 0.7){ e.setAttribute('visible', false); console.warn('peça grande escondida', e.tagName, big); }
+    });
+  }
+  const sceneEl = document.querySelector('a-scene');
+  if(sceneEl){
+    const run = () => setTimeout(guardChef, 800);
+    if(sceneEl.hasLoaded) run(); else sceneEl.addEventListener('loaded', run);
+  }
+
+  render();
+}
+
+/* ---------------- Padrão do marcador QR (embutido, sem arquivo externo) ---------------- */
+const PATT = `182 138 138 168 186 240 246 213 127 135 192 195 168 138 138 182
+138 154 136 138  82  73 181 100 184 178 119 212 138 136 154 138
+138 136 115 138 160 130 112 178 105  83 174 205 138 115 136 138
+169 138 138 155 178 167 137 125 192 137 124 161 155 138 138 169
+182  48 169 162  92 187 161  70 116 124 234  66 104 192 101 186
+122  69 125 187  84  75 152 106 177 132 134 183 244 158 130 241
+142 139 118 124  99 126 194 133  60 163 124  90 127 179 180 189
+238 132 132 121 165 124 142  62 170  88  71 172 170 213 150 243
+202 218 151  92  36  87  71 108  62 118 184 163 127 137 127 180
+255 135 119 121 109  72 202 129 168  79  73 136 140 109 144 243
+135 185 158 195 146 174  79 107  99  83  14 117 126 144 119 181
+151 255 175 138 132 169  98  83 214 172 146  66  66  58 148 188
+169 138 138 155  90 104 201 154 106 107 163  29 202  99  72 205
+138 136 115 138  59  97 173 127 114 101  99 122 114  56 160 255
+138 154 136 138  69 179  60 120 136 185  22 197 187 208 132 245
+182 138 138 168 142 234 173 213 197 245 178 138 192 166 198 245
+182 138 138 168 186 240 246 213 127 135 192 195 168 138 138 182
+138 154 136 138  82  73 181 100 184 178 119 212 138 136 154 138
+138 136 115 138 160 130 112 178 105  83 174 205 138 115 136 138
+169 138 138 155 178 167 137 125 192 137 124 161 155 138 138 169
+182  48 169 162  92 187 161  70 116 124 234  66 104 192 101 186
+122  69 125 187  84  75 152 106 177 132 134 183 244 158 130 241
+142 139 118 124  99 126 194 133  60 163 124  90 127 179 180 189
+238 132 132 121 165 124 142  62 170  88  71 172 170 213 150 243
+202 218 151  92  36  87  71 108  62 118 184 163 127 137 127 180
+255 135 119 121 109  72 202 129 168  79  73 136 140 109 144 243
+135 185 158 195 146 174  79 107  99  83  14 117 126 144 119 181
+151 255 175 138 132 169  98  83 214 172 146  66  66  58 148 188
+169 138 138 155  90 104 201 154 106 107 163  29 202  99  72 205
+138 136 115 138  59  97 173 127 114 101  99 122 114  56 160 255
+138 154 136 138  69 179  60 120 136 185  22 197 187 208 132 245
+182 138 138 168 142 234 173 213 197 245 178 138 192 166 198 245
+182 138 138 168 186 240 246 213 127 135 192 195 168 138 138 182
+138 154 136 138  82  73 181 100 184 178 119 212 138 136 154 138
+138 136 115 138 160 130 112 178 105  83 174 205 138 115 136 138
+169 138 138 155 178 167 137 125 192 137 124 161 155 138 138 169
+182  48 169 162  92 187 161  70 116 124 234  66 104 192 101 186
+122  69 125 187  84  75 152 106 177 132 134 183 244 158 130 241
+142 139 118 124  99 126 194 133  60 163 124  90 127 179 180 189
+238 132 132 121 165 124 142  62 170  88  71 172 170 213 150 243
+202 218 151  92  36  87  71 108  62 118 184 163 127 137 127 180
+255 135 119 121 109  72 202 129 168  79  73 136 140 109 144 243
+135 185 158 195 146 174  79 107  99  83  14 117 126 144 119 181
+151 255 175 138 132 169  98  83 214 172 146  66  66  58 148 188
+169 138 138 155  90 104 201 154 106 107 163  29 202  99  72 205
+138 136 115 138  59  97 173 127 114 101  99 122 114  56 160 255
+138 154 136 138  69 179  60 120 136 185  22 197 187 208 132 245
+182 138 138 168 142 234 173 213 197 245 178 138 192 166 198 245
+
+182 138 138 169 186 241 189 243 180 243 181 188 205 255 245 245
+138 154 136 138 101 130 180 150 127 144 119 148  72 160 132 198
+138 136 115 138 192 158 179 213 137 109 144  58  99  56 208 166
+168 138 138 155 104 244 127 170 127 140 126  66 202 114 187 192
+195 212 205 161  66 183  90 172 163 136 117  66  29 122 197 138
+192 119 174 124 234 134 124  71 184  73  14 146 163  99  22 178
+135 178  83 137 124 132 163  88 118  79  83 172 107 101 185 245
+127 184 105 192 116 177  60 170  62 168  99 214 106 114 136 197
+213 100 178 125  70 106 133  62 108 129 107  83 154 127 120 213
+246 181 112 137 161 152 194 142  71 202  79  98 201 173  60 173
+240  73 130 167 187  75 126 124  87  72 174 169 104  97 179 234
+186  82 160 178  92  84  99 165  36 109 146 132  90  59  69 142
+168 138 138 155 162 187 124 121  92 121 195 138 155 138 138 168
+138 136 115 138 169 125 118 132 151 119 158 175 138 115 136 138
+138 154 136 138  48  69 139 132 218 135 185 255 138 136 154 138
+182 138 138 169 182 122 142 238 202 255 135 151 169 138 138 182
+182 138 138 169 186 241 189 243 180 243 181 188 205 255 245 245
+138 154 136 138 101 130 180 150 127 144 119 148  72 160 132 198
+138 136 115 138 192 158 179 213 137 109 144  58  99  56 208 166
+168 138 138 155 104 244 127 170 127 140 126  66 202 114 187 192
+195 212 205 161  66 183  90 172 163 136 117  66  29 122 197 138
+192 119 174 124 234 134 124  71 184  73  14 146 163  99  22 178
+135 178  83 137 124 132 163  88 118  79  83 172 107 101 185 245
+127 184 105 192 116 177  60 170  62 168  99 214 106 114 136 197
+213 100 178 125  70 106 133  62 108 129 107  83 154 127 120 213
+246 181 112 137 161 152 194 142  71 202  79  98 201 173  60 173
+240  73 130 167 187  75 126 124  87  72 174 169 104  97 179 234
+186  82 160 178  92  84  99 165  36 109 146 132  90  59  69 142
+168 138 138 155 162 187 124 121  92 121 195 138 155 138 138 168
+138 136 115 138 169 125 118 132 151 119 158 175 138 115 136 138
+138 154 136 138  48  69 139 132 218 135 185 255 138 136 154 138
+182 138 138 169 182 122 142 238 202 255 135 151 169 138 138 182
+182 138 138 169 186 241 189 243 180 243 181 188 205 255 245 245
+138 154 136 138 101 130 180 150 127 144 119 148  72 160 132 198
+138 136 115 138 192 158 179 213 137 109 144  58  99  56 208 166
+168 138 138 155 104 244 127 170 127 140 126  66 202 114 187 192
+195 212 205 161  66 183  90 172 163 136 117  66  29 122 197 138
+192 119 174 124 234 134 124  71 184  73  14 146 163  99  22 178
+135 178  83 137 124 132 163  88 118  79  83 172 107 101 185 245
+127 184 105 192 116 177  60 170  62 168  99 214 106 114 136 197
+213 100 178 125  70 106 133  62 108 129 107  83 154 127 120 213
+246 181 112 137 161 152 194 142  71 202  79  98 201 173  60 173
+240  73 130 167 187  75 126 124  87  72 174 169 104  97 179 234
+186  82 160 178  92  84  99 165  36 109 146 132  90  59  69 142
+168 138 138 155 162 187 124 121  92 121 195 138 155 138 138 168
+138 136 115 138 169 125 118 132 151 119 158 175 138 115 136 138
+138 154 136 138  48  69 139 132 218 135 185 255 138 136 154 138
+182 138 138 169 182 122 142 238 202 255 135 151 169 138 138 182
+
+245 198 166 192 138 178 245 197 213 173 234 142 168 138 138 182
+245 132 208 187 197  22 185 136 120  60 179  69 138 136 154 138
+255 160  56 114 122  99 101 114 127 173  97  59 138 115 136 138
+205  72  99 202  29 163 107 106 154 201 104  90 155 138 138 169
+188 148  58  66  66 146 172 214  83  98 169 132 138 175 255 151
+181 119 144 126 117  14  83  99 107  79 174 146 195 158 185 135
+243 144 109 140 136  73  79 168 129 202  72 109 121 119 135 255
+180 127 137 127 163 184 118  62 108  71  87  36  92 151 218 202
+243 150 213 170 172  71  88 170  62 142 124 165 121 132 132 238
+189 180 179 127  90 124 163  60 133 194 126  99 124 118 139 142
+241 130 158 244 183 134 132 177 106 152  75  84 187 125  69 122
+186 101 192 104  66 234 124 116  70 161 187  92 162 169  48 182
+169 138 138 155 161 124 137 192 125 137 167 178 155 138 138 169
+138 136 115 138 205 174  83 105 178 112 130 160 138 115 136 138
+138 154 136 138 212 119 178 184 100 181  73  82 138 136 154 138
+182 138 138 168 195 192 135 127 213 246 240 186 168 138 138 182
+245 198 166 192 138 178 245 197 213 173 234 142 168 138 138 182
+245 132 208 187 197  22 185 136 120  60 179  69 138 136 154 138
+255 160  56 114 122  99 101 114 127 173  97  59 138 115 136 138
+205  72  99 202  29 163 107 106 154 201 104  90 155 138 138 169
+188 148  58  66  66 146 172 214  83  98 169 132 138 175 255 151
+181 119 144 126 117  14  83  99 107  79 174 146 195 158 185 135
+243 144 109 140 136  73  79 168 129 202  72 109 121 119 135 255
+180 127 137 127 163 184 118  62 108  71  87  36  92 151 218 202
+243 150 213 170 172  71  88 170  62 142 124 165 121 132 132 238
+189 180 179 127  90 124 163  60 133 194 126  99 124 118 139 142
+241 130 158 244 183 134 132 177 106 152  75  84 187 125  69 122
+186 101 192 104  66 234 124 116  70 161 187  92 162 169  48 182
+169 138 138 155 161 124 137 192 125 137 167 178 155 138 138 169
+138 136 115 138 205 174  83 105 178 112 130 160 138 115 136 138
+138 154 136 138 212 119 178 184 100 181  73  82 138 136 154 138
+182 138 138 168 195 192 135 127 213 246 240 186 168 138 138 182
+245 198 166 192 138 178 245 197 213 173 234 142 168 138 138 182
+245 132 208 187 197  22 185 136 120  60 179  69 138 136 154 138
+255 160  56 114 122  99 101 114 127 173  97  59 138 115 136 138
+205  72  99 202  29 163 107 106 154 201 104  90 155 138 138 169
+188 148  58  66  66 146 172 214  83  98 169 132 138 175 255 151
+181 119 144 126 117  14  83  99 107  79 174 146 195 158 185 135
+243 144 109 140 136  73  79 168 129 202  72 109 121 119 135 255
+180 127 137 127 163 184 118  62 108  71  87  36  92 151 218 202
+243 150 213 170 172  71  88 170  62 142 124 165 121 132 132 238
+189 180 179 127  90 124 163  60 133 194 126  99 124 118 139 142
+241 130 158 244 183 134 132 177 106 152  75  84 187 125  69 122
+186 101 192 104  66 234 124 116  70 161 187  92 162 169  48 182
+169 138 138 155 161 124 137 192 125 137 167 178 155 138 138 169
+138 136 115 138 205 174  83 105 178 112 130 160 138 115 136 138
+138 154 136 138 212 119 178 184 100 181  73  82 138 136 154 138
+182 138 138 168 195 192 135 127 213 246 240 186 168 138 138 182
+
+182 138 138 169 151 135 255 202 238 142 122 182 169 138 138 182
+138 154 136 138 255 185 135 218 132 139  69  48 138 136 154 138
+138 136 115 138 175 158 119 151 132 118 125 169 138 115 136 138
+168 138 138 155 138 195 121  92 121 124 187 162 155 138 138 168
+142  69  59  90 132 146 109  36 165  99  84  92 178 160  82 186
+234 179  97 104 169 174  72  87 124 126  75 187 167 130  73 240
+173  60 173 201  98  79 202  71 142 194 152 161 137 112 181 246
+213 120 127 154  83 107 129 108  62 133 106  70 125 178 100 213
+197 136 114 106 214  99 168  62 170  60 177 116 192 105 184 127
+245 185 101 107 172  83  79 118  88 163 132 124 137  83 178 135
+178  22  99 163 146  14  73 184  71 124 134 234 124 174 119 192
+138 197 122  29  66 117 136 163 172  90 183  66 161 205 212 195
+192 187 114 202  66 126 140 127 170 127 244 104 155 138 138 168
+166 208  56  99  58 144 109 137 213 179 158 192 138 115 136 138
+198 132 160  72 148 119 144 127 150 180 130 101 138 136 154 138
+245 245 255 205 188 181 243 180 243 189 241 186 169 138 138 182
+182 138 138 169 151 135 255 202 238 142 122 182 169 138 138 182
+138 154 136 138 255 185 135 218 132 139  69  48 138 136 154 138
+138 136 115 138 175 158 119 151 132 118 125 169 138 115 136 138
+168 138 138 155 138 195 121  92 121 124 187 162 155 138 138 168
+142  69  59  90 132 146 109  36 165  99  84  92 178 160  82 186
+234 179  97 104 169 174  72  87 124 126  75 187 167 130  73 240
+173  60 173 201  98  79 202  71 142 194 152 161 137 112 181 246
+213 120 127 154  83 107 129 108  62 133 106  70 125 178 100 213
+197 136 114 106 214  99 168  62 170  60 177 116 192 105 184 127
+245 185 101 107 172  83  79 118  88 163 132 124 137  83 178 135
+178  22  99 163 146  14  73 184  71 124 134 234 124 174 119 192
+138 197 122  29  66 117 136 163 172  90 183  66 161 205 212 195
+192 187 114 202  66 126 140 127 170 127 244 104 155 138 138 168
+166 208  56  99  58 144 109 137 213 179 158 192 138 115 136 138
+198 132 160  72 148 119 144 127 150 180 130 101 138 136 154 138
+245 245 255 205 188 181 243 180 243 189 241 186 169 138 138 182
+182 138 138 169 151 135 255 202 238 142 122 182 169 138 138 182
+138 154 136 138 255 185 135 218 132 139  69  48 138 136 154 138
+138 136 115 138 175 158 119 151 132 118 125 169 138 115 136 138
+168 138 138 155 138 195 121  92 121 124 187 162 155 138 138 168
+142  69  59  90 132 146 109  36 165  99  84  92 178 160  82 186
+234 179  97 104 169 174  72  87 124 126  75 187 167 130  73 240
+173  60 173 201  98  79 202  71 142 194 152 161 137 112 181 246
+213 120 127 154  83 107 129 108  62 133 106  70 125 178 100 213
+197 136 114 106 214  99 168  62 170  60 177 116 192 105 184 127
+245 185 101 107 172  83  79 118  88 163 132 124 137  83 178 135
+178  22  99 163 146  14  73 184  71 124 134 234 124 174 119 192
+138 197 122  29  66 117 136 163 172  90 183  66 161 205 212 195
+192 187 114 202  66 126 140 127 170 127 244 104 155 138 138 168
+166 208  56  99  58 144 109 137 213 179 158 192 138 115 136 138
+198 132 160  72 148 119 144 127 150 180 130 101 138 136 154 138
+245 245 255 205 188 181 243 180 243 189 241 186 169 138 138 182
+`;
+
+/* ---------------- Pedido de permissão da câmera ---------------- */
+(function(){
+  const btn = document.getElementById('startBtn');
+  const msg = document.getElementById('startMsg');
+  const screen = document.getElementById('start');
+  let started = false;
+
+  function fail(text){ msg.textContent = text; btn.disabled = false; btn.textContent = '📷 Tentar novamente'; }
+
+  function launch(){
+    if(started) return; started = true;
+    const tpl = document.getElementById('sceneTpl');
+    tpl.content.querySelector('#marker').setAttribute('url', URL.createObjectURL(new Blob([PATT], {type:'text/plain'})));
+    document.body.insertBefore(document.importNode(tpl.content, true), document.getElementById('hud'));
+    initGame();
+    // diagnóstico: confere se a imagem da câmera realmente entrou na página
+    setTimeout(() => {
+      const v = document.querySelector('video');
+      const h = document.getElementById('hint');
+      if(!v){ h.innerHTML = '📷 A câmera não iniciou. Recarregue a página e permita a câmera.'; h.classList.remove('hide'); }
+      else if(v.paused){ v.play().catch(() => {}); }
+    }, 3500);
+    screen.classList.add('out');
+    setTimeout(() => screen.remove(), 600);
+  }
+
+  const mv = document.getElementById('markerView');
+  document.getElementById('markerBtn').addEventListener('click', () => { mv.hidden = false; });
+  document.getElementById('markerClose').addEventListener('click', () => { mv.hidden = true; });
+
+  btn.addEventListener('click', async () => {
+    Sound.unlock(); Sound.startMusic(); Sound.tick();   // precisa ser dentro do toque
+    msg.textContent = '';
+    if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      return fail('A câmera só funciona em link HTTPS (não como arquivo local). Hospede o arquivo e abra o link seguro no Chrome ou Safari.');
+    }
+    btn.disabled = true; btn.textContent = 'Aguardando permissão…';
+    try{
+      // Isso faz o navegador mostrar o aviso "Permitir que este site use a câmera?"
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' } }, audio:false });
+      stream.getTracks().forEach(t => t.stop());
+      launch();
+    }catch(err){
+      const n = err && err.name;
+      if(n === 'NotAllowedError' || n === 'SecurityError')
+        fail('Permissão negada. Toque no cadeado 🔒 ao lado do endereço, permita a câmera e tente novamente.');
+      else if(n === 'NotFoundError' || n === 'OverconstrainedError')
+        fail('Nenhuma câmera foi encontrada neste aparelho.');
+      else if(n === 'NotReadableError')
+        fail('A câmera está sendo usada por outro app. Feche-o e tente novamente.');
+      else
+        fail('Não foi possível abrir a câmera. Recarregue a página e tente de novo.');
+    }
+  });
+})();
+</script>
+</body>
+</html>
