@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Fatima Confeitaria RA</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+<style>
+  :root{
+    --white:#FFFFFF;
+    --gray:#F5F7FA;
+    --line:#E3E7EE;
+    --brown:#4A3525;
+    --ink:#1A1A1A;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{background:#000}
+  body{background:transparent!important}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    font-family:'Nunito',system-ui,sans-serif;color:var(--brown);touch-action:manipulation}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:1000;pointer-events:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display:flex;flex-direction:column;justify-content:space-between}
+  #hud button{pointer-events:auto;font-family:inherit}
+
+  #top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 0}
+  .brand{display:flex;align-items:center;gap:10px;background:var(--white);border:2px solid var(--brown);
+    border-radius:var(--radius);padding:6px 14px 6px 8px;box-shadow:0 4px 0 rgba(74,53,37,.25)}
+  .badge{width:38px;height:38px;border-radius:50%;background:var(--gray);display:grid;place-items:center;font-size:22px;border:2px solid var(--ink)}
+  .brand b{font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;display:block;line-height:1.1}
+  .brand small{font-size:12px;font-weight:700;opacity:.75}
+  #muteBtn{width:46px;height:46px;border-radius:var(--radius);border:2px solid var(--brown);background:var(--white);
+    font-size:20px;box-shadow:0 4px 0 rgba(74,53,37,.25);cursor:pointer}
+
+  #dots{display:flex;justify-content:center;gap:8px;padding:10px 0 0}
+  #dots i{width:34px;height:8px;border-radius:8px;background:rgba(255,255,255,.65);border:1.5px solid var(--brown);transition:.3s}
+  #dots i.on{background:var(--brown)}
+
+  #hint{align-self:center;background:var(--white);border:2px solid var(--brown);border-radius:var(--radius);
+    padding:10px 16px;font-weight:800;font-size:14px;text-align:center;max-width:88%;
+    box-shadow:0 4px 0 rgba(74,53,37,.25);transition:opacity .3s}
+  #hint.hide{opacity:0}
+
+  #banner{position:fixed;left:50%;top:32%;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(28px,9vw,52px);color:var(--brown);
+    background:var(--white);border:3px solid var(--brown);border-radius:24px;padding:10px 26px;white-space:nowrap;
+    box-shadow:0 6px 0 rgba(74,53,37,.3);transition:.35s cubic-bezier(.2,1.6,.4,1)}
+  #banner.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+  #panel{pointer-events:auto;align-self:center;width:100%;max-width:520px;margin:0 auto;
+    background:var(--white);border:2px solid var(--brown);border-bottom:0;border-radius:24px 24px 0 0;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(0,0,0,.25);
+    max-height:52vh;overflow-y:auto}
+  #speech{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  #speech .badge{flex:0 0 auto;width:46px;height:46px;font-size:26px}
+  #title{margin:0;font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;line-height:1.15}
+  #say{margin:2px 0 0;font-size:14px;font-weight:700;opacity:.8}
+
+  #options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  #options:empty{display:none}
+  .opt{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;text-align:left;
+    background:var(--gray);border:2.5px solid var(--line);border-radius:var(--radius);
+    font-weight:800;font-size:14px;color:var(--brown);cursor:pointer;transition:.15s}
+  .opt:active{transform:scale(.97)}
+  .opt.sel{background:var(--white);border-color:var(--brown);box-shadow:0 3px 0 var(--brown)}
+  .opt:last-child:nth-child(odd){grid-column:span 2}
+  .sw{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid var(--ink)}
+
+  #summary{display:none;background:var(--gray);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;
+    font-size:14px;font-weight:700;line-height:1.5}
+  #summary.on{display:block}
+
+  #mainBtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:var(--radius);
+    background:var(--brown);color:var(--white);font-family:'Fredoka',sans-serif;font-weight:500;font-size:19px;
+    box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:.15s}
+  #mainBtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  #mainBtn:disabled{opacity:.4;box-shadow:none;cursor:not-allowed}
+
+  @media (max-height:560px){
+    #panel{max-height:62vh;padding-top:8px}
+    #speech{margin-bottom:6px}
+    #dots{display:none}
+    .opt{min-height:46px}
+  }
+  .a-enter-vr,.a-orientation-modal{display:none!important}
+
+  /* ---------- Modo discreto: translúcido e só aparece depois de ler o marcador ---------- */
+  #top,#dots,#panel{opacity:0;pointer-events:none!important;transition:opacity .6s ease,transform .35s ease}
+  body.ready #top,body.ready #dots,body.ready #panel{opacity:1}
+  body.ready #top{pointer-events:none!important}
+  body.ready #panel{pointer-events:auto!important}
+  body.ready #muteBtn{pointer-events:auto}
+
+  #hint{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:50%;transform:translateX(-50%);
+    background:rgba(255,255,255,.72);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.85);border-radius:999px;padding:7px 14px;font-size:12px;
+    box-shadow:none;z-index:1001;pointer-events:none;width:max-content;max-width:92%}
+  body.ready #hint{top:calc(env(safe-area-inset-top) + 66px)}
+
+  .brand{background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none;padding:3px 12px 3px 4px;gap:8px}
+  .brand .badge{width:28px;height:28px;font-size:16px;border-width:1.5px}
+  .brand b{font-size:13px}.brand small{font-size:11px}
+  #muteBtn{width:36px;height:36px;font-size:15px;background:rgba(255,255,255,.62);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.85);box-shadow:none}
+  #top{padding:8px 10px 0}
+  #dots{padding-top:6px;gap:6px}
+  #dots i{width:20px;height:4px;border-width:1px;background:rgba(255,255,255,.5)}
+  #dots i.on{background:var(--brown)}
+
+  #panel{background:rgba(255,255,255,.6);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    border:1px solid rgba(255,255,255,.85);border-bottom:0;border-radius:20px 20px 0 0;
+    padding:2px 12px calc(10px + env(safe-area-inset-bottom));max-height:34vh;box-shadow:none}
+  #panel.min{transform:translateY(calc(100% - 26px))}
+  #handle{display:block;margin:0 auto 4px;width:72px;height:20px;border:0;background:transparent;
+    position:relative;cursor:pointer;pointer-events:auto}
+  #handle::after{content:'';position:absolute;left:8px;right:8px;top:8px;height:4px;border-radius:4px;
+    background:var(--brown);opacity:.45}
+  #speech{margin-bottom:6px;gap:8px}
+  #speech .badge{width:28px;height:28px;font-size:16px;border-width:1.5px}
+  #title{font-size:15px}
+  #say{font-size:12px;margin:0}
+  #options{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;scrollbar-width:none}
+  #options::-webkit-scrollbar{display:none}
+  .opt{flex:0 0 auto;min-height:44px;padding:6px 10px;font-size:13px;gap:8px;
+    background:rgba(245,247,250,.8);border-width:2px}
+  .opt:last-child:nth-child(odd){grid-column:auto}
+  .opt.sel{background:rgba(255,255,255,.95)}
+  .sw{width:20px;height:20px}
+  #summary{padding:6px 10px;font-size:12px;margin-bottom:8px;background:rgba(245,247,250,.75);line-height:1.4}
+  #mainBtn{min-height:46px;font-size:16px;box-shadow:0 3px 0 var(--ink)}
+  #banner{background:rgba(255,255,255,.8);font-size:clamp(22px,7vw,40px)}
+  @media (max-height:560px){ #panel{max-height:46vh} }
+
+  /* ---------- Brilho da câmera (imagem clareada) ---------- */
+  :root{--cam-bright:1.5}
+  #arjs-video,body > video{z-index:-2!important;visibility:visible!important;opacity:1!important;
+    filter:brightness(var(--cam-bright)) contrast(1.05) saturate(1.1)!important}
+  a-scene,.a-canvas{background:transparent!important}
+  .tools{display:flex;gap:6px}
+  #sunBtn{width:36px;height:36px;border-radius:var(--radius);font-size:15px;cursor:pointer;
+    background:rgba(255,255,255,.62);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none}
+  .tools #sunBtn,.tools #muteBtn{pointer-events:auto}
+
+  /* ---------- Tela de permissão da câmera ---------- */
+  #start{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:20px;
+    background:linear-gradient(160deg,#FFFFFF 0%,#F5F7FA 100%);transition:opacity .5s ease}
+  #start.out{opacity:0;pointer-events:none}
+  #start .card{width:100%;max-width:380px;text-align:center;background:var(--white);
+    border:2px solid var(--brown);border-radius:24px;padding:26px 22px;box-shadow:0 6px 0 rgba(74,53,37,.25)}
+  #start .big{width:76px;height:76px;margin:0 auto 10px;border-radius:50%;background:var(--gray);
+    border:2px solid var(--ink);display:grid;place-items:center;font-size:42px}
+  #start h1{margin:0 0 8px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:26px}
+  #start p{margin:0 0 16px;font-weight:700;font-size:15px;line-height:1.45}
+  #start small{display:block;margin-top:14px;font-weight:700;font-size:12px;opacity:.75}
+  #startBtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:var(--radius);
+    background:var(--brown);color:var(--white);font-family:'Fredoka',sans-serif;font-weight:500;font-size:18px;
+    box-shadow:0 4px 0 var(--ink);cursor:pointer}
+  #startBtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  #startBtn:disabled{opacity:.5}
+  #startMsg{margin:12px 0 0!important;font-size:13px!important;color:#8A2B2B}
+  #startMsg:empty{display:none}
+</style>
+</head>
+
+<body>
+
+<!-- =============== TELA DE PERMISSÃO DA CÂMERA =============== -->
+<div id="start" role="dialog" aria-labelledby="startTitle">
+  <div class="card">
+    <div class="big">👩‍🍳</div>
+    <h1 id="startTitle">Fatima Confeitaria RA</h1>
+    <p>Para montar o bolo em realidade aumentada, o jogo precisa usar a <b>câmera</b> do seu celular.</p>
+    <button id="startBtn" type="button">📷 Permitir câmera e começar</button>
+    <p id="startMsg" aria-live="polite"></p>
+    <small>Depois, aponte a câmera para o marcador <b>Hiro</b>.</small>
+  </div>
+</div>
+
+<!-- =============== CENA AR (só é criada depois da permissão) =============== -->
+<template id="sceneTpl">
+<a-scene
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  renderer="antialias: true; alpha: true; colorManagement: true"
+  arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;">
+
+  <a-entity light="type: ambient; color: #ffffff; intensity: 0.55"></a-entity>
+  <a-entity light="type: directional; color: #ffffff; intensity: 0.6" position="1 3 2"></a-entity>
+
+  <a-marker id="marker" preset="hiro">
+    <a-entity id="world" scale="1.2 1.2 1.2">
+
+
+      <!-- Mesa de cozinha -->
+      <a-box position="0 0.40 0" width="1.3" height="0.06" depth="0.9" color="#FFFFFF"></a-box>
+      <a-box position="0 0.365 0" width="1.34" height="0.02" depth="0.94" color="#4A3525"></a-box>
+      <a-cylinder position="-0.55 0.18 -0.35" radius="0.04" height="0.36" color="#4A3525"></a-cylinder>
+      <a-cylinder position="0.55 0.18 -0.35" radius="0.04" height="0.36" color="#4A3525"></a-cylinder>
+      <a-cylinder position="-0.55 0.18 0.35" radius="0.04" height="0.36" color="#4A3525"></a-cylinder>
+      <a-cylinder position="0.55 0.18 0.35" radius="0.04" height="0.36" color="#4A3525"></a-cylinder>
+
+      <!-- Utensílios -->
+      <!-- tigela -->
+      <a-cylinder position="-0.45 0.48 0.18" radius="0.1" height="0.1" color="#F5F7FA"></a-cylinder>
+      <a-cylinder position="-0.45 0.532 0.18" radius="0.088" height="0.006" color="#E8D2B0"></a-cylinder>
+      <!-- fouet -->
+      <a-cylinder position="-0.40 0.62 0.18" rotation="0 0 20" radius="0.011" height="0.16" color="#4A3525"></a-cylinder>
+      <a-torus position="-0.455 0.53 0.18" rotation="0 90 20" radius="0.03" radius-tubular="0.004" color="#C9CFD8"></a-torus>
+      <!-- rolo de massa -->
+      <a-cylinder position="0.4 0.46 0.27" rotation="0 0 90" radius="0.03" height="0.24" color="#8B5E3C"></a-cylinder>
+      <a-cylinder position="0.4 0.46 0.27" rotation="0 0 90" radius="0.013" height="0.36" color="#4A3525"></a-cylinder>
+      <!-- saco de confeitar -->
+      <a-cone position="0.42 0.52 -0.2" rotation="0 0 -75" radius-bottom="0.06" radius-top="0.006" height="0.22" color="#FFFFFF"></a-cone>
+      <!-- cupcake -->
+      <a-cone position="-0.45 0.49 -0.22" radius-bottom="0.034" radius-top="0.05" height="0.06" color="#4A3525"></a-cone>
+      <a-sphere position="-0.45 0.54 -0.22" radius="0.05" scale="1 0.8 1" color="#F6B7C8"></a-sphere>
+      <a-sphere position="-0.45 0.585 -0.22" radius="0.014" color="#D7263D"></a-sphere>
+
+      <!-- Suporte e prato do bolo -->
+      <a-cylinder position="0 0.46 0" radius="0.05" height="0.06" color="#F5F7FA"></a-cylinder>
+      <a-cylinder position="0 0.5 0" radius="0.33" height="0.02" color="#FFFFFF"></a-cylinder>
+      <a-torus position="0 0.51 0" rotation="90 0 0" radius="0.32" radius-tubular="0.006" color="#4A3525"></a-torus>
+
+      <!-- ====== BOLO (inicia invisível) ====== -->
+      <a-entity id="cake">
+        <!-- Camada 1: massa -->
+        <a-entity id="gBase" visible="false">
+          <a-cylinder class="sponge" position="0 0.55 0" radius="0.25" height="0.08" color="#F3E2A9"></a-cylinder>
+          <a-cylinder position="0 0.6025 0" radius="0.255" height="0.025" color="#FFF6E8"></a-cylinder>
+          <a-cylinder class="sponge" position="0 0.655 0" radius="0.25" height="0.08" color="#F3E2A9"></a-cylinder>
+        </a-entity>
+        <!-- Camada 2: cobertura -->
+        <a-entity id="gFrost" visible="false">
+          <a-cylinder class="frost" position="0 0.715 0" radius="0.262" height="0.04" color="#FFFDF7"></a-cylinder>
+          <a-torus class="frost" position="0 0.735 0" rotation="90 0 0" radius="0.25" radius-tubular="0.018" color="#FFFDF7"></a-torus>
+          <a-entity id="drips"></a-entity>
+        </a-entity>
+        <!-- Camada 3: decoração -->
+        <a-entity id="gDecor" visible="false"></a-entity>
+      </a-entity>
+
+      <a-entity id="confetti"></a-entity>
+
+      <!-- ====== CHEF (cozinheira) ====== -->
+      <a-entity id="chef" position="1.05 0 -0.05" rotation="0 -45 0" scale="0.95 0.95 0.95">
+        <a-entity id="chefBody">
+          <!-- sapatos -->
+          <a-box position="-0.07 0.03 0.03" width="0.09" height="0.06" depth="0.15" color="#5A3A26"></a-box>
+          <a-box position="0.07 0.03 0.03" width="0.09" height="0.06" depth="0.15" color="#5A3A26"></a-box>
+          <!-- meia-calça preta -->
+          <a-cylinder position="-0.07 0.19 0" radius="0.04" height="0.26" color="#1A1A1A"></a-cylinder>
+          <a-cylinder position="0.07 0.19 0" radius="0.04" height="0.26" color="#1A1A1A"></a-cylinder>
+          <!-- avental/saia (cone) -->
+          <a-cylinder position="0 0.4 0" radius-top="0.13" radius-bottom="0.2" height="0.22" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.52 0" radius="0.138" height="0.035" color="#F5F7FA"></a-cylinder>
+          <!-- dólmã (jaqueta) -->
+          <a-cylinder position="0 0.67 0" radius-top="0.115" radius-bottom="0.135" height="0.28" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.825 0" radius="0.06" height="0.05" color="#FFFFFF"></a-cylinder>
+          <!-- botões marrons (transpassado) -->
+          <a-sphere position="-0.05 0.74 0.113" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="0.05 0.74 0.113" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="-0.05 0.65 0.118" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="0.05 0.65 0.118" radius="0.014" color="#6B4226"></a-sphere>
+          <a-box position="0 0.69 0.125" width="0.004" height="0.24" depth="0.004" color="#D5DAE2"></a-box>
+
+          <!-- braços -->
+          <a-entity id="armL" position="-0.15 0.78 0" rotation="0 0 -60">
+            <a-cylinder position="0 -0.1 0" radius="0.037" height="0.2" color="#FFFFFF"></a-cylinder>
+            <a-cylinder position="0 -0.2 0" radius="0.042" height="0.04" color="#F5F7FA"></a-cylinder>
+            <a-cylinder position="0 -0.27 0" radius="0.028" height="0.12" color="#FFE3D0"></a-cylinder>
+          </a-entity>
+          <a-entity id="armR" position="0.15 0.78 0" rotation="0 0 60">
+            <a-cylinder position="0 -0.1 0" radius="0.037" height="0.2" color="#FFFFFF"></a-cylinder>
+            <a-cylinder position="0 -0.2 0" radius="0.042" height="0.04" color="#F5F7FA"></a-cylinder>
+            <a-cylinder position="0 -0.27 0" radius="0.028" height="0.12" color="#FFE3D0"></a-cylinder>
+          </a-entity>
+
+          <!-- cabeça -->
+          <a-sphere position="0 0.93 0" radius="0.11" color="#FFE3D0" segments-height="18"></a-sphere>
+          <!-- cabelo preto longo -->
+          <a-sphere position="0 0.93 0" radius="0.117" theta-length="72" color="#1A1A1A"></a-sphere>
+          <a-sphere position="0 0.92 -0.03" radius="0.114" color="#1A1A1A"></a-sphere>
+          <a-box position="0 0.74 -0.14" width="0.24" height="0.44" depth="0.05" color="#1A1A1A"></a-box>
+          <a-box position="-0.118 0.78 0.02" width="0.04" height="0.36" depth="0.07" color="#1A1A1A"></a-box>
+          <a-box position="0.118 0.78 0.02" width="0.04" height="0.36" depth="0.07" color="#1A1A1A"></a-box>
+          <!-- olhos castanhos -->
+          <a-sphere position="-0.04 0.932 0.098" radius="0.022" scale="1 1.25 0.4" color="#6B4226"></a-sphere>
+          <a-sphere position="0.04 0.932 0.098" radius="0.022" scale="1 1.25 0.4" color="#6B4226"></a-sphere>
+          <a-sphere position="-0.034 0.944 0.105" radius="0.006" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0.046 0.944 0.105" radius="0.006" color="#FFFFFF"></a-sphere>
+          <!-- óculos redondos -->
+          <a-torus position="-0.04 0.932 0.106" radius="0.031" radius-tubular="0.004" color="#1A1A1A"></a-torus>
+          <a-torus position="0.04 0.932 0.106" radius="0.031" radius-tubular="0.004" color="#1A1A1A"></a-torus>
+          <a-box position="0 0.94 0.107" width="0.02" height="0.004" depth="0.004" color="#1A1A1A"></a-box>
+          <!-- bochechas e sorriso -->
+          <a-circle position="-0.066 0.9 0.088" rotation="0 -35 0" radius="0.017" color="#FFA9A9" opacity="0.7" transparent="true"></a-circle>
+          <a-circle position="0.066 0.9 0.088" rotation="0 35 0" radius="0.017" color="#FFA9A9" opacity="0.7" transparent="true"></a-circle>
+          <a-torus position="0 0.893 0.104" rotation="0 0 180" radius="0.012" radius-tubular="0.003" arc="180" color="#8B5E3C"></a-torus>
+
+          <!-- chapéu de chef (toque) -->
+          <a-cylinder position="0 1.03 0" radius="0.118" height="0.07" color="#F5F7FA"></a-cylinder>
+          <a-sphere position="0 1.12 0" radius="0.14" scale="1 0.78 1" color="#FFFFFF"></a-sphere>
+          <a-sphere position="-0.08 1.14 0" radius="0.085" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0.08 1.14 0" radius="0.085" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0 1.17 -0.04" radius="0.09" color="#FFFFFF"></a-sphere>
+        </a-entity>
+      </a-entity>
+
+    </a-entity>
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+</template>
+
+<!-- =============== HUD / INTERFACE =============== -->
+<div id="hud">
+  <div>
+    <div id="top">
+      <div class="brand">
+        <div class="badge">👩‍🍳</div>
+        <div><b>Fatima Confeitaria RA</b><small id="stepLabel">Passo 1 de 4</small></div>
+      </div>
+      <div class="tools">
+        <button id="sunBtn" type="button" aria-label="Ajustar brilho da câmera">☀️</button>
+        <button id="muteBtn" type="button" aria-label="Ligar ou desligar o som">🔊</button>
+      </div>
+    </div>
+    <div id="dots"><i class="on"></i><i></i><i></i><i></i></div>
+  </div>
+
+  <div id="hint">📷 Aponte a câmera para o marcador <b>Hiro</b></div>
+
+  <section id="panel" aria-live="polite">
+    <button id="handle" type="button" aria-label="Minimizar ou expandir painel"></button>
+    <div id="speech">
+      <div class="badge">👩‍🍳</div>
+      <div><h2 id="title"></h2><p id="say"></p></div>
+    </div>
+    <div id="options" role="radiogroup"></div>
+    <div id="summary"></div>
+    <button id="mainBtn" type="button"></button>
+  </section>
+</div>
+<div id="banner">🎉 Parabéns! 🎂</div>
+
+<script>
+function initGame(){
+  'use strict';
+
+  /* ---------------- Dados do jogo ---------------- */
+  const STEPS = [
+    { title:'1. Escolha a massa', say:'Qual sabor vamos assar hoje?', key:'massa',
+      options:[
+        {id:'baunilha', label:'Baunilha',   color:'#F3E2A9'},
+        {id:'chocolate',label:'Chocolate',  color:'#6B3E26'},
+        {id:'morango',  label:'Morango',    color:'#F4A6B8'},
+        {id:'redvelvet',label:'Red Velvet', color:'#A3182E'}
+      ]},
+    { title:'2. Escolha a cobertura', say:'Agora a cobertura, que tal?', key:'cobertura',
+      options:[
+        {id:'chantilly', label:'Chantilly',          color:'#FFFDF7'},
+        {id:'chocoescuro',label:'Chocolate Escuro',  color:'#3B2417'},
+        {id:'limao',     label:'Ganache de Limão',   color:'#D6E86A'},
+        {id:'sky',       label:'Ganache Azul Sky',   color:'#8EC9F0'}
+      ]},
+    { title:'3. Decore o bolo', say:'Hora de deixar tudo fofinho!', key:'decoracao',
+      options:[
+        {id:'granulados',label:'Granulados Coloridos', color:'#FF8FB1'},
+        {id:'flores',    label:'Flores de Chantilly',  color:'#FFFFFF'},
+        {id:'completo',  label:'Estilo Completo',      color:'#FFD93D'}
+      ]}
+  ];
+
+  const $ = s => document.querySelector(s);
+  const state = { step:0, selected:null, choice:{} };
+
+  const el = {
+    title:$('#title'), say:$('#say'), options:$('#options'), summary:$('#summary'),
+    main:$('#mainBtn'), dots:[...document.querySelectorAll('#dots i')], stepLabel:$('#stepLabel'),
+    hint:$('#hint'), banner:$('#banner'), mute:$('#muteBtn'),
+    gBase:$('#gBase'), gFrost:$('#gFrost'), gDecor:$('#gDecor'),
+    drips:$('#drips'), confetti:$('#confetti'),
+    chefBody:$('#chefBody'), armL:$('#armL'), armR:$('#armR')
+  };
+
+  /* ---------------- Áudio (Web Audio API) ---------------- */
+  let audioCtx = null, muted = false;
+  function ac(){
+    if(!audioCtx){ const A = window.AudioContext || window.webkitAudioContext; if(A) audioCtx = new A(); }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function note(freq, start, dur, type, vol){
+    const c = ac(); if(!c || muted) return;
+    const o = c.createOscillator(), g = c.createGain();
+    const t = c.currentTime + start;
+    o.type = type || 'triangle'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.18, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function sfxSelect(){ note(660,0,.08,'sine',.12); }
+  function sfxConfirm(){ note(523.25,0,.09,'triangle',.15); note(783.99,.08,.14,'triangle',.15); }
+  function playVictory(){
+    const melody = [
+      [523.25,0.00,.14],[659.25,0.15,.14],[783.99,0.30,.14],[1046.5,0.45,.30],
+      [783.99,0.80,.12],[1046.5,0.92,.12],[1318.5,1.04,.55]
+    ];
+    melody.forEach(m => note(m[0], m[1], m[2], 'triangle', .2));
+    // harmonia
+    [[392,0.00,.4],[523.25,0.45,.3],[659.25,1.04,.55]].forEach(m => note(m[0], m[1], m[2], 'sine', .1));
+    // brilhinhos
+    [2093,2349,2637,3136].forEach((f,i)=> note(f, 1.5 + i*.07, .1, 'sine', .06));
+  }
+  el.mute.addEventListener('click', () => {
+    muted = !muted; el.mute.textContent = muted ? '🔇' : '🔊';
+    if(!muted){ ac(); sfxSelect(); }
+  });
+
+  /* ---------------- Utilidades 3D ---------------- */
+  function make(parent, tag, attrs){
+    const e = document.createElement(tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    parent.appendChild(e); return e;
+  }
+  function paint(sel, color){
+    document.querySelectorAll(sel).forEach(e => e.setAttribute('color', color));
+  }
+  function easeOutBounce(x){
+    const n1 = 7.5625, d1 = 2.75;
+    if(x < 1/d1) return n1*x*x;
+    if(x < 2/d1) return n1*(x -= 1.5/d1)*x + .75;
+    if(x < 2.5/d1) return n1*(x -= 2.25/d1)*x + .9375;
+    return n1*(x -= 2.625/d1)*x + .984375;
+  }
+  // camada "cai" sobre o bolo
+  function drop(group, h, dur){
+    group.setAttribute('visible', true);
+    const token = {}; group.__tw = token;
+    const t0 = performance.now();
+    (function step(now){
+      if(group.__tw !== token) return;
+      const k = Math.min(1, (now - t0) / dur);
+      group.object3D.position.y = h * (1 - easeOutBounce(k));
+      if(k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  function hideGroup(group){
+    group.__tw = null;
+    group.object3D.position.y = 0;
+    group.setAttribute('visible', false);
+  }
+
+  // pingos da cobertura (gerados uma vez)
+  (function buildDrips(){
+    const n = 14;
+    for(let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2;
+      const L = 0.05 + ((i * 37) % 7) / 7 * 0.07;
+      const x = Math.cos(a) * 0.256, z = Math.sin(a) * 0.256;
+      make(el.drips, 'a-cylinder', { class:'frost', position:`${x} ${0.705 - L/2} ${z}`, radius:'0.022', height:L, color:'#FFFDF7' });
+      make(el.drips, 'a-sphere',   { class:'frost', position:`${x} ${0.705 - L} ${z}`,  radius:'0.022', color:'#FFFDF7' });
+    }
+  })();
+
+  /* ---------------- Decorações ---------------- */
+  const CONFETTI_COLORS = ['#FF6B9D','#FFD93D','#6BCB77','#4D96FF','#B983FF','#FF9F45'];
+  function addSprinkles(count, rMin, rMax){
+    for(let i = 0; i < count; i++){
+      const r = rMin + Math.random() * (rMax - rMin), a = Math.random() * Math.PI * 2;
+      make(el.gDecor, 'a-box', {
+        position:`${Math.cos(a)*r} 0.747 ${Math.sin(a)*r}`,
+        rotation:`0 ${Math.random()*180} 0`,
+        width:'0.045', height:'0.012', depth:'0.012',
+        color: CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0]
+      });
+    }
+  }
+  function addFlowers(){
+    const n = 6, R = 0.165;
+    for(let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2 + 0.3;
+      const f = make(el.gDecor, 'a-entity', { position:`${Math.cos(a)*R} 0.748 ${Math.sin(a)*R}` });
+      for(let p = 0; p < 6; p++){
+        const pa = (p / 6) * Math.PI * 2;
+        make(f, 'a-sphere', { position:`${Math.cos(pa)*0.03} 0.006 ${Math.sin(pa)*0.03}`, radius:'0.023', scale:'1 0.7 1', color:'#FFFFFF' });
+      }
+      make(f, 'a-sphere', { position:'0 0.015 0', radius:'0.02', color:'#FFD76B' });
+      make(f, 'a-sphere', { position:'0.055 0 0.02',  radius:'0.018', scale:'1 0.35 0.6', color:'#8FD19E' });
+      make(f, 'a-sphere', { position:'-0.055 0 -0.02', radius:'0.018', scale:'1 0.35 0.6', color:'#8FD19E' });
+    }
+  }
+  function addPearls(){
+    const n = 26;
+    for(let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2;
+      make(el.gDecor, 'a-sphere', { position:`${Math.cos(a)*0.262} 0.527 ${Math.sin(a)*0.262}`, radius:'0.013', color:'#FFFFFF' });
+    }
+  }
+  function addCherry(){
+    make(el.gDecor, 'a-sphere', { position:'0 0.785 0', radius:'0.042', color:'#D7263D' });
+    make(el.gDecor, 'a-cylinder', { position:'0.012 0.85 0', rotation:'0 0 -18', radius:'0.004', height:'0.08', color:'#4A3525' });
+  }
+  function buildDecor(kind){
+    el.gDecor.innerHTML = '';
+    if(kind === 'granulados'){ addSprinkles(60, 0.02, 0.23); }
+    else if(kind === 'flores'){ addFlowers(); }
+    else { addSprinkles(34, 0.10, 0.23); addFlowers(); addPearls(); addCherry(); }
+  }
+
+  /* ---------------- Confete e animação (loop) ---------------- */
+  const JUMP_DUR = 2600;
+  let jumpT0 = null, lastT = performance.now();
+  const confetti = [];
+
+  function spawnConfetti(){
+    for(let i = 0; i < 40; i++){
+      const e = make(el.confetti, 'a-box', {
+        position:`${(Math.random()-.5)*1.4} ${1.0+Math.random()*0.8} ${(Math.random()-.5)*1.2}`,
+        width:'0.035', height:'0.035', depth:'0.006',
+        color: CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0]
+      });
+      const p = { e, ready:false, vy:0.35+Math.random()*0.45, sp:(Math.random()-.5)*8 };
+      e.addEventListener('loaded', () => { p.ready = true; });
+      confetti.push(p);
+    }
+  }
+  function clearConfetti(){ confetti.length = 0; el.confetti.innerHTML = ''; }
+
+  function loop(now){
+    const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    const D = Math.PI / 180;
+    if(!el.chefBody.object3D || !el.armL.object3D || !el.armR.object3D){ requestAnimationFrame(loop); return; }
+    let armAngle = 60 + Math.sin(now / 700) * 3;   // repouso, leve balanço
+    let bodyY = Math.sin(now / 600) * 0.008;
+
+    if(jumpT0 !== null){
+      const t = now - jumpT0;
+      if(t >= JUMP_DUR){ jumpT0 = null; }
+      else {
+        const s = Math.abs(Math.sin((t / JUMP_DUR) * Math.PI * 5));
+        bodyY = s * 0.32;
+        armAngle = 60 + s * 85;                       // braços para cima ao pular
+      }
+    }
+    el.chefBody.object3D.position.y = bodyY;
+    el.armL.object3D.rotation.z = -armAngle * D;
+    el.armR.object3D.rotation.z =  armAngle * D;
+
+    for(let i = confetti.length - 1; i >= 0; i--){
+      const p = confetti[i];
+      if(!p.ready) continue;
+      const o = p.e.object3D;
+      o.position.y -= p.vy * dt;
+      o.rotation.x += p.sp * dt; o.rotation.z += p.sp * 0.6 * dt;
+      if(o.position.y < 0.02){ p.e.remove(); confetti.splice(i, 1); }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  function celebrate(){
+    playVictory();
+    spawnConfetti();
+    jumpT0 = performance.now();
+    el.banner.classList.add('show');
+    setTimeout(() => el.banner.classList.remove('show'), 2800);
+  }
+
+  /* ---------------- Interface ---------------- */
+  function labelOf(stepIdx, id){
+    const o = STEPS[stepIdx].options.find(x => x.id === id);
+    return o ? o.label : '-';
+  }
+
+  function render(){
+    const s = state.step;
+    el.dots.forEach((d, i) => d.classList.toggle('on', i <= Math.min(s, 3)));
+    el.stepLabel.textContent = s < 4 ? `Passo ${s + 1} de 4` : 'Bolo pronto!';
+    el.options.innerHTML = '';
+    el.summary.classList.remove('on');
+
+    if(s < 3){
+      const st = STEPS[s];
+      el.title.textContent = st.title;
+      el.say.textContent = st.say;
+      st.options.forEach(o => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'opt'; b.dataset.id = o.id;
+        b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', 'false');
+        b.innerHTML = `<span class="sw" style="background:${o.color}"></span><span>${o.label}</span>`;
+        b.addEventListener('click', () => select(o.id));
+        el.options.appendChild(b);
+      });
+      el.main.textContent = 'Confirmar ✔';
+      el.main.disabled = true;
+    } else if(s === 3){
+      el.title.textContent = '4. Finalização';
+      el.say.textContent = 'Tudo pronto! Vamos comemorar?';
+      showSummary();
+      el.main.textContent = 'Finalizar bolo 🎉';
+      el.main.disabled = false;
+    } else {
+      el.title.textContent = 'Parabéns, confeiteiro(a)!';
+      el.say.textContent = 'Seu bolo ficou uma delícia!';
+      showSummary();
+      el.main.textContent = 'Fazer Outro Bolo 🔄';
+      el.main.disabled = false;
+    }
+  }
+  function showSummary(){
+    const c = state.choice;
+    el.summary.innerHTML =
+      `🍰 Massa: <b>${labelOf(0, c.massa)}</b><br>` +
+      `🍫 Cobertura: <b>${labelOf(1, c.cobertura)}</b><br>` +
+      `✨ Decoração: <b>${labelOf(2, c.decoracao)}</b>`;
+    el.summary.classList.add('on');
+  }
+  function select(id){
+    state.selected = id;
+    el.options.querySelectorAll('.opt').forEach(b => {
+      const on = b.dataset.id === id;
+      b.classList.toggle('sel', on); b.setAttribute('aria-checked', on);
+    });
+    el.main.disabled = false;
+    sfxSelect();
+  }
+
+  function applyStep(){
+    const s = state.step, id = state.selected;
+    const color = STEPS[s].options.find(o => o.id === id).color;
+    state.choice[STEPS[s].key] = id;
+    if(s === 0){ paint('.sponge', color); drop(el.gBase, 0.45, 750); }
+    if(s === 1){ paint('.frost', color);  drop(el.gFrost, 0.45, 750); }
+    if(s === 2){ buildDecor(id);          drop(el.gDecor, 0.4, 700); }
+  }
+
+  el.main.addEventListener('click', () => {
+    ac(); // libera o áudio no primeiro toque
+    if(state.step < 3){
+      if(!state.selected) return;
+      sfxConfirm(); applyStep();
+      state.step++; state.selected = null; render();
+    } else if(state.step === 3){
+      celebrate();
+      state.step = 4; render();
+    } else {
+      resetAll();
+    }
+  });
+
+  function resetAll(){
+    jumpT0 = null;
+    clearConfetti();
+    el.banner.classList.remove('show');
+    [el.gBase, el.gFrost, el.gDecor].forEach(hideGroup);
+    el.gDecor.innerHTML = '';
+    paint('.sponge', '#F3E2A9');
+    paint('.frost', '#FFFDF7');
+    state.step = 0; state.selected = null; state.choice = {};
+    sfxSelect();
+    render();
+  }
+
+  /* ---------------- Marcador ---------------- */
+  const marker = $('#marker');
+  const HINT_DEFAULT = '📷 Aponte a câmera para o marcador <b>Hiro</b>';
+  const warn = msg => { el.hint.innerHTML = msg; el.hint.classList.remove('hide'); };
+
+  // A interface só aparece depois que o marcador for lido pela primeira vez
+  marker.addEventListener('markerFound', () => {
+    document.body.classList.add('ready');
+    el.hint.classList.add('hide');
+  });
+  marker.addEventListener('markerLost', () => {
+    el.hint.innerHTML = HINT_DEFAULT;
+    el.hint.classList.remove('hide');
+  });
+
+  // Diagnóstico da câmera
+  if(!window.isSecureContext || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+    warn('⚠️ A câmera só abre em link <b>HTTPS</b> no Chrome/Safari (não como arquivo local).');
+  }
+  window.addEventListener('camera-error', () =>
+    warn('📷 Não consegui abrir a câmera. Permita o acesso nas configurações do navegador e recarregue.'));
+
+  // Minimizar / expandir painel
+  $('#handle').addEventListener('click', () => $('#panel').classList.toggle('min'));
+
+  // Brilho da câmera: toque no ☀️ para clarear ou escurecer a imagem
+  const LEVELS = [1.0, 1.5, 2.0, 2.6];
+  let lv = 1;
+  $('#sunBtn').addEventListener('click', () => {
+    lv = (lv + 1) % LEVELS.length;
+    document.documentElement.style.setProperty('--cam-bright', LEVELS[lv]);
+    el.hint.innerHTML = '☀️ Brilho da câmera: nível ' + (lv + 1) + ' de ' + LEVELS.length;
+    el.hint.classList.remove('hide');
+    clearTimeout(window.__sunT);
+    window.__sunT = setTimeout(() => { if(document.body.classList.contains('ready')) el.hint.classList.add('hide'); }, 1400);
+  });
+
+  render();
+}
+
+/* ---------------- Pedido de permissão da câmera ---------------- */
+(function(){
+  const btn = document.getElementById('startBtn');
+  const msg = document.getElementById('startMsg');
+  const screen = document.getElementById('start');
+  let started = false;
+
+  function fail(text){ msg.textContent = text; btn.disabled = false; btn.textContent = '📷 Tentar novamente'; }
+
+  function launch(){
+    if(started) return; started = true;
+    const tpl = document.getElementById('sceneTpl');
+    document.body.insertBefore(document.importNode(tpl.content, true), document.getElementById('hud'));
+    initGame();
+    screen.classList.add('out');
+    setTimeout(() => screen.remove(), 600);
+  }
+
+  btn.addEventListener('click', async () => {
+    msg.textContent = '';
+    if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      return fail('A câmera só funciona em link HTTPS (não como arquivo local). Hospede o arquivo e abra o link seguro no Chrome ou Safari.');
+    }
+    btn.disabled = true; btn.textContent = 'Aguardando permissão…';
+    try{
+      // Isso faz o navegador mostrar o aviso "Permitir que este site use a câmera?"
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' } }, audio:false });
+      stream.getTracks().forEach(t => t.stop());
+      launch();
+    }catch(err){
+      const n = err && err.name;
+      if(n === 'NotAllowedError' || n === 'SecurityError')
+        fail('Permissão negada. Toque no cadeado 🔒 ao lado do endereço, permita a câmera e tente novamente.');
+      else if(n === 'NotFoundError' || n === 'OverconstrainedError')
+        fail('Nenhuma câmera foi encontrada neste aparelho.');
+      else if(n === 'NotReadableError')
+        fail('A câmera está sendo usada por outro app. Feche-o e tente novamente.');
+      else
+        fail('Não foi possível abrir a câmera. Recarregue a página e tente de novo.');
+    }
+  });
+})();
+</script>
+</body>
+</html>
