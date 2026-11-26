@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Pizzaria RA</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+<style>
+  :root{
+    --white:#FFFFFF;
+    --gray:#F5F7FA;
+    --line:#E3E7EE;
+    --brown:#4A3525;
+    --ink:#1A1A1A;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html{background:#000}
+  body{background:transparent!important}
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;
+    font-family:'Nunito',system-ui,sans-serif;color:var(--brown);touch-action:manipulation}
+
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;z-index:1000;pointer-events:none;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    display:flex;flex-direction:column;justify-content:space-between}
+  #hud button{pointer-events:auto;font-family:inherit}
+
+  #top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 0}
+  .brand{display:flex;align-items:center;gap:10px;background:var(--white);border:2px solid var(--brown);
+    border-radius:var(--radius);padding:6px 14px 6px 8px;box-shadow:0 4px 0 rgba(74,53,37,.25)}
+  .badge{width:38px;height:38px;border-radius:50%;background:var(--gray);display:grid;place-items:center;font-size:22px;border:2px solid var(--ink)}
+  .brand b{font-family:'Fredoka',sans-serif;font-weight:600;font-size:16px;display:block;line-height:1.1}
+  .brand small{font-size:12px;font-weight:700;opacity:.75}
+  #muteBtn{width:46px;height:46px;border-radius:var(--radius);border:2px solid var(--brown);background:var(--white);
+    font-size:20px;box-shadow:0 4px 0 rgba(74,53,37,.25);cursor:pointer}
+
+  #dots{display:flex;justify-content:center;gap:8px;padding:10px 0 0}
+  #dots i{width:34px;height:8px;border-radius:8px;background:rgba(255,255,255,.65);border:1.5px solid var(--brown);transition:.3s}
+  #dots i.on{background:var(--brown)}
+
+  #hint{align-self:center;background:var(--white);border:2px solid var(--brown);border-radius:var(--radius);
+    padding:10px 16px;font-weight:800;font-size:14px;text-align:center;max-width:88%;
+    box-shadow:0 4px 0 rgba(74,53,37,.25);transition:opacity .3s}
+  #hint.hide{opacity:0}
+
+  #banner{position:fixed;left:50%;top:32%;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;
+    font-family:'Fredoka',sans-serif;font-weight:600;font-size:clamp(28px,9vw,52px);color:var(--brown);
+    background:var(--white);border:3px solid var(--brown);border-radius:24px;padding:10px 26px;white-space:nowrap;
+    box-shadow:0 6px 0 rgba(74,53,37,.3);transition:.35s cubic-bezier(.2,1.6,.4,1)}
+  #banner.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+  #panel{pointer-events:auto;align-self:center;width:100%;max-width:520px;margin:0 auto;
+    background:var(--white);border:2px solid var(--brown);border-bottom:0;border-radius:24px 24px 0 0;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(0,0,0,.25);
+    max-height:52vh;overflow-y:auto}
+  #speech{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+  #speech .badge{flex:0 0 auto;width:46px;height:46px;font-size:26px}
+  #title{margin:0;font-family:'Fredoka',sans-serif;font-weight:600;font-size:20px;line-height:1.15}
+  #say{margin:2px 0 0;font-size:14px;font-weight:700;opacity:.8}
+
+  #options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+  #options:empty{display:none}
+  .opt{display:flex;align-items:center;gap:10px;min-height:56px;padding:8px 12px;text-align:left;
+    background:var(--gray);border:2.5px solid var(--line);border-radius:var(--radius);
+    font-weight:800;font-size:14px;color:var(--brown);cursor:pointer;transition:.15s}
+  .opt:active{transform:scale(.97)}
+  .opt.sel{background:var(--white);border-color:var(--brown);box-shadow:0 3px 0 var(--brown)}
+  .opt:last-child:nth-child(odd){grid-column:span 2}
+  .sw{flex:0 0 auto;width:26px;height:26px;border-radius:50%;border:2px solid var(--ink)}
+
+  #summary{display:none;background:var(--gray);border-radius:var(--radius);padding:10px 14px;margin-bottom:12px;
+    font-size:14px;font-weight:700;line-height:1.5}
+  #summary.on{display:block}
+
+  #mainBtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:var(--radius);
+    background:var(--brown);color:var(--white);font-family:'Fredoka',sans-serif;font-weight:500;font-size:19px;
+    box-shadow:0 4px 0 var(--ink);cursor:pointer;transition:.15s}
+  #mainBtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  #mainBtn:disabled{opacity:.4;box-shadow:none;cursor:not-allowed}
+
+  @media (max-height:560px){
+    #panel{max-height:62vh;padding-top:8px}
+    #speech{margin-bottom:6px}
+    #dots{display:none}
+    .opt{min-height:46px}
+  }
+  .a-enter-vr,.a-orientation-modal{display:none!important}
+
+  /* ---------- Modo discreto: translúcido e só aparece depois de ler o marcador ---------- */
+  #top,#dots,#panel{opacity:0;pointer-events:none!important;transition:opacity .6s ease,transform .35s ease}
+  body.ready #top,body.ready #dots,body.ready #panel{opacity:1}
+  body.ready #top{pointer-events:none!important}
+  body.ready #panel{pointer-events:auto!important}
+  body.ready #muteBtn{pointer-events:auto}
+
+  #hint{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:50%;transform:translateX(-50%);
+    background:rgba(255,255,255,.85);
+    border:1px solid rgba(255,255,255,.85);border-radius:999px;padding:7px 14px;font-size:12px;
+    box-shadow:none;z-index:1001;pointer-events:none;width:max-content;max-width:92%}
+  body.ready #hint{top:calc(env(safe-area-inset-top) + 66px)}
+
+  .brand{background:rgba(255,255,255,.8);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none;padding:3px 12px 3px 4px;gap:8px}
+  .brand .badge{width:28px;height:28px;font-size:16px;border-width:1.5px}
+  .brand b{font-size:13px}.brand small{font-size:11px}
+  #muteBtn{width:36px;height:36px;font-size:15px;background:rgba(255,255,255,.8);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none}
+  #top{padding:8px 10px 0}
+  #dots{padding-top:6px;gap:6px}
+  #dots i{width:20px;height:4px;border-width:1px;background:rgba(255,255,255,.5)}
+  #dots i.on{background:var(--brown)}
+
+  #panel{background:rgba(255,255,255,.82);
+    border:1px solid rgba(255,255,255,.85);border-bottom:0;border-radius:20px 20px 0 0;
+    padding:2px 12px calc(10px + env(safe-area-inset-bottom));max-height:44vh;box-shadow:none}
+  #panel.min{transform:translateY(calc(100% - 26px))}
+  #handle{display:block;margin:0 auto 4px;width:72px;height:20px;border:0;background:transparent;
+    position:relative;cursor:pointer;pointer-events:auto}
+  #handle::after{content:'';position:absolute;left:8px;right:8px;top:8px;height:4px;border-radius:4px;
+    background:var(--brown);opacity:.45}
+  #speech{margin-bottom:6px;gap:8px}
+  #speech .badge{width:28px;height:28px;font-size:16px;border-width:1.5px}
+  #title{font-size:15px}
+  #say{font-size:12px;margin:0}
+  #options{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;scrollbar-width:none}
+  #options::-webkit-scrollbar{display:none}
+  .opt{flex:0 0 auto;min-height:44px;padding:6px 10px;font-size:13px;gap:8px;
+    background:rgba(245,247,250,.8);border-width:2px}
+  .opt:last-child:nth-child(odd){grid-column:auto}
+  .opt.sel{background:rgba(255,255,255,.95)}
+  .sw{width:20px;height:20px}
+  #summary{padding:6px 10px;font-size:12px;margin-bottom:8px;background:rgba(245,247,250,.75);line-height:1.4}
+  #mainBtn{min-height:46px;font-size:16px;box-shadow:0 3px 0 var(--ink)}
+  #banner{background:rgba(255,255,255,.8);font-size:clamp(22px,7vw,40px)}
+  @media (max-height:560px){ #panel{max-height:46vh} }
+
+  /* ---------- Brilho da câmera (imagem clareada) ---------- */
+  :root{--cam-bright:1.5}
+  #arjs-video,body > video{z-index:-2!important;visibility:visible!important;opacity:1!important;
+    filter:brightness(var(--cam-bright)) contrast(1.05) saturate(1.1)!important}
+  a-scene,.a-canvas{background:transparent!important}
+  .tools{display:flex;gap:6px}
+  #sunBtn,#musicBtn,#tableBtn{width:36px;height:36px;border-radius:var(--radius);font-size:15px;cursor:pointer;
+    background:rgba(255,255,255,.8);
+    border:1px solid rgba(255,255,255,.85);box-shadow:none}
+  .tools #sunBtn,.tools #muteBtn,.tools #musicBtn,.tools #tableBtn{pointer-events:auto}
+  #musicBtn.off{opacity:.45}
+  #options{flex-wrap:wrap!important;overflow:visible!important}
+  .opt{min-height:40px;padding:5px 9px;font-size:12.5px;gap:6px}
+  .opt .sw{width:18px;height:18px}
+
+  /* ---------- Tela de permissão da câmera ---------- */
+  #start{position:fixed;inset:0;z-index:3000;display:grid;place-items:center;padding:20px;
+    background:linear-gradient(160deg,#FFFFFF 0%,#F5F7FA 100%);transition:opacity .5s ease}
+  #start.out{opacity:0;pointer-events:none}
+  #start .card{width:100%;max-width:380px;text-align:center;background:var(--white);
+    border:2px solid var(--brown);border-radius:24px;padding:26px 22px;box-shadow:0 6px 0 rgba(74,53,37,.25)}
+  #start .big{width:76px;height:76px;margin:0 auto 10px;border-radius:50%;background:var(--gray);
+    border:2px solid var(--ink);display:grid;place-items:center;font-size:42px}
+  #start h1{margin:0 0 8px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:26px}
+  #start p{margin:0 0 16px;font-weight:700;font-size:15px;line-height:1.45}
+  #start small{display:block;margin-top:14px;font-weight:700;font-size:12px;opacity:.75}
+  #startBtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:var(--radius);
+    background:var(--brown);color:var(--white);font-family:'Fredoka',sans-serif;font-weight:500;font-size:18px;
+    box-shadow:0 4px 0 var(--ink);cursor:pointer}
+  #startBtn:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+  #startBtn:disabled{opacity:.5}
+  #startMsg{margin:12px 0 0!important;font-size:13px!important;color:#8A2B2B}
+  #startMsg:empty{display:none}
+  #markerBtn{width:100%;min-height:46px;margin-top:10px;border:2px solid var(--brown);border-radius:var(--radius);
+    background:var(--white);color:var(--brown);font-family:'Fredoka',sans-serif;font-weight:500;font-size:16px;cursor:pointer}
+  [hidden]{display:none!important}
+  #ver{position:fixed;left:10px;top:calc(env(safe-area-inset-top) + 104px);z-index:1002;font:800 11px 'Nunito',sans-serif;color:#fff;background:rgba(74,53,37,.75);padding:2px 8px;border-radius:999px;pointer-events:none}
+  #markerView{position:fixed;inset:0;z-index:4000;background:#FFFFFF;display:grid;place-items:center;padding:16px;overflow:auto}
+  #markerView .mcard{width:100%;max-width:460px;text-align:center}
+  #markerView img{width:100%;max-width:min(92vw,62vh);height:auto;image-rendering:pixelated;display:block;margin:0 auto}
+  #markerView p{font-weight:700;font-size:14px;line-height:1.45;margin:10px 0 14px}
+  #markerClose{min-height:50px;padding:0 28px;border:2px solid var(--ink);border-radius:var(--radius);background:var(--brown);
+    color:var(--white);font-family:'Fredoka',sans-serif;font-size:17px;box-shadow:0 4px 0 var(--ink);cursor:pointer}
+
+  /* ---------- v12: ações no topo à direita, ferramentas em coluna, botão de fixar ---------- */
+  #top{justify-content:flex-start}
+  body.started #hint{top:calc(env(safe-area-inset-top) + 62px)}
+  body.ready #hint{top:calc(env(safe-area-inset-top) + 62px)}
+  #top,#dots,#panel,#tools{visibility:hidden}
+  body.ready #top,body.ready #dots,body.ready #panel,body.ready #tools{visibility:visible}
+
+  #actions{position:absolute;top:calc(env(safe-area-inset-top) + 8px);right:10px;display:flex;gap:8px;align-items:center;
+    visibility:hidden;z-index:1003}
+  body.started #actions{visibility:visible}
+  #removeBtn,#closeBtn{height:40px;border-radius:var(--radius);border:1px solid rgba(255,255,255,.9);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:5px;font:800 13px 'Nunito',sans-serif;
+    box-shadow:0 2px 0 rgba(74,53,37,.3)}
+  #removeBtn{padding:0 12px;background:rgba(255,255,255,.88);color:var(--brown)}
+  #removeBtn:disabled{opacity:.4;cursor:default;box-shadow:none}
+  #closeBtn{width:40px;font-size:18px;background:var(--brown);color:#fff;border-color:var(--brown)}
+  #removeBtn:active:not(:disabled),#closeBtn:active{transform:translateY(2px);box-shadow:none}
+
+  #tools{position:absolute;right:10px;top:calc(env(safe-area-inset-top) + 58px);display:flex;flex-direction:column;gap:6px;z-index:1003}
+
+  #placeBtn{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.8);visibility:hidden;opacity:0;
+    min-height:64px;padding:0 26px;border:2px solid var(--ink);border-radius:20px;background:var(--brown);color:#fff;
+    font:500 20px 'Fredoka',sans-serif;box-shadow:0 5px 0 var(--ink);cursor:pointer;z-index:1004;white-space:nowrap;
+    transition:opacity .25s ease,transform .25s cubic-bezier(.2,1.6,.4,1)}
+  body.canplace #placeBtn{visibility:visible;opacity:1;transform:translate(-50%,-50%) scale(1);animation:pulse 1.8s ease-out infinite}
+  #placeBtn:active{animation:none;transform:translate(-50%,-50%) scale(.95)}
+  @keyframes pulse{0%,100%{box-shadow:0 5px 0 var(--ink),0 0 0 0 rgba(74,53,37,.55)}60%{box-shadow:0 5px 0 var(--ink),0 0 0 16px rgba(74,53,37,0)}}
+  #mainBtn.wait{opacity:.55}
+
+  #confirmClose{position:fixed;inset:0;z-index:4500;background:rgba(0,0,0,.45);display:grid;place-items:center;padding:20px}
+  #confirmClose .dlg{width:100%;max-width:340px;background:#fff;border:2px solid var(--brown);border-radius:22px;padding:20px;text-align:center;
+    box-shadow:0 6px 0 rgba(74,53,37,.25)}
+  #confirmClose h3{margin:0 0 6px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:22px}
+  #confirmClose p{margin:0 0 16px;font-weight:700;font-size:14px}
+  #confirmClose .row{display:flex;gap:10px}
+  #confirmClose button{flex:1;min-height:48px;border-radius:var(--radius);border:2px solid var(--ink);cursor:pointer;
+    font-family:'Fredoka',sans-serif;font-weight:500;font-size:15px}
+  #ccNo{background:#fff;color:var(--brown);border-color:var(--brown)!important}
+  #ccYes{background:var(--brown);color:#fff}
+
+  #bye{position:fixed;inset:0;z-index:5000;display:grid;place-items:center;padding:20px;
+    background:linear-gradient(160deg,#FFFFFF 0%,#F5F7FA 100%)}
+  #bye .card{width:100%;max-width:380px;text-align:center;background:#fff;border:2px solid var(--brown);border-radius:24px;
+    padding:26px 22px;box-shadow:0 6px 0 rgba(74,53,37,.25)}
+  #bye .big{font-size:52px;margin-bottom:6px}
+  #bye h1{margin:0 0 8px;font-family:'Fredoka',sans-serif;font-weight:600;font-size:26px}
+  #bye p{margin:0 0 18px;font-weight:700;font-size:15px;line-height:1.45}
+  #byeBtn{width:100%;min-height:56px;border:2px solid var(--ink);border-radius:var(--radius);background:var(--brown);color:#fff;
+    font-family:'Fredoka',sans-serif;font-weight:500;font-size:18px;box-shadow:0 4px 0 var(--ink);cursor:pointer}
+  body.closed #hud,body.closed #ver,body.closed #banner{display:none}
+  #hint{max-width:calc(100% - 124px);text-align:center;line-height:1.3}
+  /* ---------- Pizzaria: opções, ações de desenho e toque na pizza ---------- */
+  .opt .em{font-size:18px;line-height:1;width:20px;text-align:center}
+  .opt.act{background:rgba(255,243,224,.92);border:2px dashed var(--brown)}
+  #panel #options{overflow-y:auto!important;max-height:26vh;-webkit-overflow-scrolling:touch}
+  @media (max-height:560px){ #panel #options{max-height:30vh} }
+  a-scene,.a-canvas{touch-action:none}
+</style>
+</head>
+
+<body>
+
+<!-- =============== MARCADOR QR (para mostrar em outra tela ou imprimir) =============== -->
+<div id="markerView" hidden>
+  <div class="mcard">
+    <img alt="Marcador QR da Pizzaria RA" src="data:image/png;base64,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AggqAIIKIKgAggogqAAIKoCgAggqgKACIKgAggogqAAIKoCgAggqgKACIKgAggogqACCCoCgAggqgKACIKgAggogqACCCoCgAggqgKACCKojABBUAEEFEFQABBVAUAEEFUBQARBUAEEFEFQABBVAUAEEFUBQARBUAEEFEFQAQQVAUAEEFUBQARBUAEEFEFQAQQVAUAEEFUBQAQQVAEEFEFQAQQVAUAEEFUBQAQQVAEEFEFQAQQVAUAEEFUBQAQQVAEEFEFQAQQUQVAAEFUBQAQQVAEEFEFQAQQUQVAAEFUBQAQQVQFABEFQAQQUQVAAEFUBQAQQVQFABEFQAQQUQVABBBUBQAQQVQFABEFQAQQUQVABBBUBQAQQVQFABEFQAQQUQVABBBUBQAQQVQFABBBUAQQUQVABBBUBQAQQVQFABBBUAQQUQVABBBRBUAAQVQFABBBUAQQUQVABBBRBUAAQVQFABBBVAUAEQVABBBRBUAAQVQFABBBVAUAEQVABBBRBUAAQVQFABBBVAUAEQVABBBRBUAEEFQFABBBVAUAH4V7UzAHBDBRBUAEEFQFABBBVAUAEEFQBBBRBUAEEFQFABBBVAUAEEFQBBBRBUAEEFEFQABBVAUAEEFQBBBRBUAEEFEFQABBVAUAEEFUBQARBUAEEFEFQABBVAUAEEFUBQARBUAEEFEFQABBVAUAEEFUBQARBUAEEFEFQAQQVAUAEEFUBQARBUAEEFEFQAQQVAUAEEFUBQAQQVAEEFEFQAQQVAUAEEFUBQAQQVAEEFEFQAQQUQVAAEFUBQAQQVAEEFEFQAQQUQVAAEFUBQAQQVAEEFEFQAQQUQVAAEFUBQAQQVQFABEFQAQQUQVAAEFUBQAQQVQFABEFQAQQUQVABBBUBQAQQVQFABEFQAQQUQVABBBUBQAQQVQFABBBUAQQUQVABBBUBQAQQVQFABBBUAQQUQVABBBSBJ/gInzgftAqQvswAAAABJRU5ErkJggg==">
+    <p>Mostre esta imagem <b>inteira</b> (com a moldura preta) em outra tela, ou imprima.<br>Depois aponte a câmera do celular para ela.</p>
+    <button id="markerClose" type="button">Fechar</button>
+  </div>
+</div>
+
+<!-- =============== TELA DE PERMISSÃO DA CÂMERA =============== -->
+<div id="start" role="dialog" aria-labelledby="startTitle">
+  <div class="card">
+    <div class="big">🍕</div>
+    <h1 id="startTitle">Pizzaria RA</h1>
+    <p>Para montar a pizza em realidade aumentada, o jogo precisa usar a <b>câmera</b> do seu celular.</p>
+    <button id="startBtn" type="button">📷 Permitir câmera e começar</button>
+    <p id="startMsg" aria-live="polite"></p>
+    <button id="markerBtn" type="button">🔳 Ver o marcador QR</button>
+    <small>Depois, aponte a câmera para o <b>marcador QR</b>.</small>
+    <small>Para manter os modelos parados no ambiente, o jogo também usa os sensores de movimento do aparelho.</small>
+    <small style="opacity:.45">versão 1 · pizzaria em realidade aumentada</small>
+  </div>
+</div>
+
+<!-- =============== CENA AR (só é criada depois da permissão) =============== -->
+<template id="sceneTpl">
+<a-scene
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  renderer="antialias: true; alpha: true; colorManagement: true"
+  arjs="sourceType: webcam; trackingMethod: best; debugUIEnabled: false;">
+
+  <a-entity light="type: ambient; color: #ffffff; intensity: 0.55"></a-entity>
+  <a-entity light="type: directional; color: #ffffff; intensity: 0.6" position="1 3 2"></a-entity>
+
+  <a-marker id="marker" type="pattern" url="" smooth="true" smoothCount="8" smoothTolerance="0.01" smoothThreshold="6">
+    <a-entity id="world" scale="1.2 1.2 1.2">
+
+
+      <!-- Mesa de cozinha -->
+      <a-box class="tabletop" position="0 0.40 0" width="1.3" height="0.06" depth="0.9" color="#D9B38C"></a-box>
+      <a-cylinder position="-0.55 0.185 -0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+      <a-cylinder position="0.55 0.185 -0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+      <a-cylinder position="-0.55 0.185 0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+      <a-cylinder position="0.55 0.185 0.35" radius="0.04" height="0.37" color="#4A3525"></a-cylinder>
+
+      <!-- Utensílios -->
+      <!-- tigela -->
+      <a-cylinder position="-0.45 0.48 0.18" radius="0.1" height="0.1" color="#F5F7FA"></a-cylinder>
+      <a-cylinder position="-0.45 0.536 0.18" radius="0.088" height="0.012" color="#E8D2B0"></a-cylinder>
+      <!-- fouet -->
+      <a-cylinder position="-0.40 0.62 0.18" rotation="0 0 20" radius="0.011" height="0.16" color="#4A3525"></a-cylinder>
+      <a-torus position="-0.455 0.53 0.18" rotation="0 90 20" radius="0.03" radius-tubular="0.004" color="#C9CFD8"></a-torus>
+      <!-- rolo de massa -->
+      <a-cylinder position="0.4 0.46 0.27" rotation="0 0 90" radius="0.03" height="0.24" color="#8B5E3C"></a-cylinder>
+      <a-cylinder position="0.4 0.46 0.27" rotation="0 0 90" radius="0.013" height="0.36" color="#4A3525"></a-cylinder>
+      <!-- saco de confeitar -->
+      <a-cone position="0.42 0.49 -0.2" rotation="0 0 -75" radius-bottom="0.06" radius-top="0.006" height="0.22" color="#FFFFFF"></a-cone>
+      <!-- cupcake -->
+      <a-cone position="-0.45 0.46 -0.22" radius-bottom="0.034" radius-top="0.05" height="0.06" color="#4A3525"></a-cone>
+      <a-sphere position="-0.45 0.515 -0.22" radius="0.05" scale="1 0.8 1" color="#F6B7C8"></a-sphere>
+      <a-sphere position="-0.45 0.563 -0.22" radius="0.014" color="#D7263D"></a-sphere>
+
+      <!-- Suporte e prato da pizza -->
+      <a-cylinder position="0 0.46 0" radius="0.05" height="0.06" color="#F5F7FA"></a-cylinder>
+      <a-cylinder position="0 0.5 0" radius="0.33" height="0.02" color="#FFFFFF"></a-cylinder>
+      <a-torus position="0 0.51 0" rotation="90 0 0" radius="0.32" radius-tubular="0.006" color="#4A3525"></a-torus>
+
+            <!-- ====== PIZZA (inicia invisível) ====== -->
+      <a-entity id="pizza">
+        <!-- massa + borda -->
+        <a-entity id="gDough" visible="false">
+          <a-cylinder class="dough" position="0 0.53 0" radius="0.285" height="0.04" color="#EBCB8B"></a-cylinder>
+          <a-torus class="crust" position="0 0.552 0" rotation="90 0 0" radius="0.278" radius-tubular="0.03" color="#D9AE6A"></a-torus>
+        </a-entity>
+        <!-- cobertura desenhada, divisão e ingredientes (criados por código) -->
+        <a-entity id="pizzaTop"></a-entity>
+      </a-entity>
+
+<a-entity id="confetti"></a-entity>
+
+      <!-- ====== CHEF (cozinheira) ====== -->
+      <a-entity id="chef" position="1.05 0 -0.05" rotation="0 -45 0" scale="0.95 0.95 0.95">
+        <a-entity id="chefBody">
+          <!-- sapatos -->
+          <a-box position="-0.07 0.03 0.03" width="0.09" height="0.06" depth="0.15" color="#5A3A26"></a-box>
+          <a-box position="0.07 0.03 0.03" width="0.09" height="0.06" depth="0.15" color="#5A3A26"></a-box>
+          <!-- calça preta -->
+          <a-cylinder position="-0.07 0.22 0" radius="0.052" height="0.34" color="#1A1A1A"></a-cylinder>
+          <a-cylinder position="0.07 0.22 0" radius="0.052" height="0.34" color="#1A1A1A"></a-cylinder>
+          <!-- dólmã (jaqueta de chef, comprida até o quadril) -->
+          <a-cylinder position="0 0.4338 0" radius="0.1460" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.5413 0" radius="0.1380" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.6488 0" radius="0.1300" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.7563 0" radius="0.1220" height="0.1095" color="#FFFFFF"></a-cylinder>
+          <a-cylinder position="0 0.825 0" radius="0.06" height="0.05" color="#FFFFFF"></a-cylinder>
+          <!-- botões marrons (transpassado) -->
+          <a-sphere position="-0.05 0.74 0.113" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="0.05 0.74 0.113" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="-0.05 0.65 0.118" radius="0.014" color="#6B4226"></a-sphere>
+          <a-sphere position="0.05 0.65 0.118" radius="0.014" color="#6B4226"></a-sphere>
+
+          <!-- braços -->
+          <a-entity id="armL" position="-0.15 0.78 0" rotation="0 0 -60">
+            <a-cylinder position="0 -0.1 0" radius="0.037" height="0.2" color="#FFFFFF"></a-cylinder>
+            <a-cylinder position="0 -0.2 0" radius="0.042" height="0.04" color="#F5F7FA"></a-cylinder>
+            <a-cylinder position="0 -0.27 0" radius="0.028" height="0.12" color="#FFE3D0"></a-cylinder>
+          </a-entity>
+          <a-entity id="armR" position="0.15 0.78 0" rotation="0 0 60">
+            <a-cylinder position="0 -0.1 0" radius="0.037" height="0.2" color="#FFFFFF"></a-cylinder>
+            <a-cylinder position="0 -0.2 0" radius="0.042" height="0.04" color="#F5F7FA"></a-cylinder>
+            <a-cylinder position="0 -0.27 0" radius="0.028" height="0.12" color="#FFE3D0"></a-cylinder>
+          </a-entity>
+
+          <a-entity id="chefHead" position="0 0.82 0">
+          <!-- cabeça -->
+          <a-sphere position="0 0.11 0" radius="0.11" color="#FFE3D0" segments-height="18"></a-sphere>
+          <!-- cabelo preto longo -->
+          <a-sphere position="0 0.11 0" radius="0.124" theta-length="72" color="#1A1A1A"></a-sphere>
+          <a-sphere position="0 0.1 -0.03" radius="0.12" color="#1A1A1A"></a-sphere>
+          <a-box position="0 -0.08 -0.14" width="0.24" height="0.44" depth="0.05" color="#1A1A1A"></a-box>
+          <a-box position="-0.118 -0.04 0.02" width="0.04" height="0.36" depth="0.07" color="#1A1A1A"></a-box>
+          <a-box position="0.118 -0.04 0.02" width="0.04" height="0.36" depth="0.07" color="#1A1A1A"></a-box>
+          <!-- olhos castanhos -->
+          <a-sphere id="eyeL" position="-0.04 0.112 0.098" radius="0.022" scale="1 1.25 0.4" color="#6B4226"></a-sphere>
+          <a-sphere id="eyeR" position="0.04 0.112 0.098" radius="0.022" scale="1 1.25 0.4" color="#6B4226"></a-sphere>
+          <a-sphere position="-0.034 0.124 0.105" radius="0.006" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0.046 0.124 0.105" radius="0.006" color="#FFFFFF"></a-sphere>
+          <!-- óculos redondos -->
+          <a-torus position="-0.04 0.112 0.106" radius="0.031" radius-tubular="0.004" color="#1A1A1A"></a-torus>
+          <a-torus position="0.04 0.112 0.106" radius="0.031" radius-tubular="0.004" color="#1A1A1A"></a-torus>
+          <a-box position="0 0.12 0.107" width="0.02" height="0.004" depth="0.004" color="#1A1A1A"></a-box>
+          <!-- bochechas e sorriso -->
+          <a-circle position="-0.066 0.08 0.088" rotation="0 -35 0" radius="0.017" color="#FFA9A9" opacity="0.7" transparent="true"></a-circle>
+          <a-circle position="0.066 0.08 0.088" rotation="0 35 0" radius="0.017" color="#FFA9A9" opacity="0.7" transparent="true"></a-circle>
+          <a-torus position="0 0.073 0.104" rotation="0 0 180" radius="0.012" radius-tubular="0.003" arc="180" color="#8B5E3C"></a-torus>
+
+          <!-- chapéu de chef (toque) -->
+          <a-cylinder position="0 0.21 0" radius="0.118" height="0.07" color="#F5F7FA"></a-cylinder>
+          <a-sphere position="0 0.3 0" radius="0.14" scale="1 0.78 1" color="#FFFFFF"></a-sphere>
+          <a-sphere position="-0.08 0.32 0" radius="0.085" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0.08 0.32 0" radius="0.085" color="#FFFFFF"></a-sphere>
+          <a-sphere position="0 0.35 -0.04" radius="0.09" color="#FFFFFF"></a-sphere>
+          </a-entity>
+        </a-entity>
+      </a-entity>
+
+    </a-entity>
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+</template>
+
+<!-- =============== HUD / INTERFACE =============== -->
+<div id="hud">
+  <div>
+    <div id="top">
+      <div class="brand">
+        <div class="badge">🍕</div>
+        <div><b>Pizzaria RA</b><small id="stepLabel">Passo 1 de 5</small></div>
+      </div>
+    </div>
+    <div id="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+  </div>
+
+  <!-- ações no topo à direita: remover modelos (à esquerda) e fechar o jogo -->
+  <div id="actions">
+    <button id="removeBtn" type="button" aria-label="Remover os modelos para ler o QR code de novo" disabled>🗑️ <span>Remover</span></button>
+    <button id="closeBtn" type="button" aria-label="Fechar o jogo">✕</button>
+  </div>
+
+  <!-- ferramentas (música, mesa, brilho, som) em coluna na lateral -->
+  <div id="tools">
+        <button id="musicBtn" type="button" aria-label="Ligar ou desligar a música" aria-pressed="true">🎵</button>
+        <button id="tableBtn" type="button" aria-label="Mudar a cor da mesa">🎨</button>
+        <button id="sunBtn" type="button" aria-label="Ajustar brilho da câmera">☀️</button>
+        <button id="muteBtn" type="button" aria-label="Ligar ou desligar o som">🔊</button>
+  </div>
+
+  <!-- aparece no centro da tela quando o QR code é lido -->
+  <button id="placeBtn" type="button">📌 Fixar modelos aqui</button>
+
+  <div id="hint">📷 Aponte a câmera para o <b>marcador QR</b></div>
+
+  <section id="panel" aria-live="polite">
+    <button id="handle" type="button" aria-label="Minimizar ou expandir painel"></button>
+    <div id="speech">
+      <div class="badge">👩‍🍳</div>
+      <div><h2 id="title"></h2><p id="say"></p></div>
+    </div>
+    <div id="options" role="radiogroup"></div>
+    <div id="summary"></div>
+    <button id="mainBtn" type="button"></button>
+  </section>
+</div>
+<div id="confirmClose" hidden>
+  <div class="dlg" role="dialog" aria-labelledby="ccTitle">
+    <h3 id="ccTitle">Fechar o jogo?</h3>
+    <p>A câmera será desligada e o jogo encerrado.</p>
+    <div class="row">
+      <button id="ccNo" type="button">Continuar jogando</button>
+      <button id="ccYes" type="button">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div id="bye" hidden>
+  <div class="card">
+    <div class="big">👋</div>
+    <h1>Jogo encerrado</h1>
+    <p>Obrigada por jogar! A câmera foi desligada.<br>Você já pode fechar esta aba.</p>
+    <button id="byeBtn" type="button">🔄 Jogar de novo</button>
+  </div>
+</div>
+
+<div id="ver">v1</div>
+<div id="banner">🎉 Parabéns! 🍕</div>
+
+<script>
+/* =============== SOM: música de fundo + efeitos (Web Audio API, sem arquivos .mp3) =============== */
+const Sound = (function(){
+  let ctx = null, master = null, musicBus = null, sfxBus = null, noiseBuf = null;
+  let sfxOn = true, musicOn = true, ducked = false;
+  let timer = null, nextTime = 0, stepN = 0, level = 0;
+  const MUSIC_VOL = 0.9, BPM = 100, S16 = 60 / BPM / 4;
+
+  // Melodia de 8 compassos sobre C - G - Am - F - C - G - F - G
+  const CH = [
+    { r:130.81, n:[261.63,329.63,392.00] },
+    { r:98.00,  n:[246.94,293.66,392.00] },
+    { r:110.00, n:[220.00,261.63,329.63] },
+    { r:87.31,  n:[220.00,261.63,349.23] },
+    { r:130.81, n:[261.63,329.63,392.00] },
+    { r:98.00,  n:[246.94,293.66,392.00] },
+    { r:87.31,  n:[220.00,261.63,349.23] },
+    { r:98.00,  n:[246.94,293.66,392.00] }
+  ];
+  const NT = {G4:392.00,A4:440.00,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880.00,B5:987.77,C6:1046.50};
+  const MEL = [
+    [[0,'E5',4],[4,'G5',2],[6,'E5',2],[8,'C5',4],[12,'D5',2],[14,'E5',2]],
+    [[0,'D5',6],[6,'B4',2],[8,'G4',4],[12,'B4',4]],
+    [[0,'C5',4],[4,'E5',2],[6,'A5',2],[8,'G5',4],[12,'E5',4]],
+    [[0,'F5',6],[6,'E5',2],[8,'D5',4],[12,'C5',4]],
+    [[0,'E5',4],[4,'G5',2],[6,'E5',2],[8,'C6',4],[12,'B5',2],[14,'G5',2]],
+    [[0,'A5',4],[4,'G5',4],[8,'D5',4],[12,'E5',2],[14,'D5',2]],
+    [[0,'C5',4],[4,'F5',2],[6,'A5',2],[8,'G5',4],[12,'F5',2],[14,'E5',2]],
+    [[0,'D5',6],[6,'E5',2],[8,'D5',4],[12,'B4',4]]
+  ];
+  const LEAD = MEL.map(bar => { const m = {}; bar.forEach(x => { m[x[0]] = [NT[x[1]], x[2]]; }); return m; });
+
+  let dead = false;
+  function init(){
+    if(dead) return null;
+    if(ctx){ if(ctx.state === 'suspended') ctx.resume(); return ctx; }
+    const A = window.AudioContext || window.webkitAudioContext;
+    if(!A) return null;
+    ctx = new A();
+    const comp = ctx.createDynamicsCompressor();
+    master = ctx.createGain(); master.gain.value = 0.9;
+    master.connect(comp); comp.connect(ctx.destination);
+    musicBus = ctx.createGain(); musicBus.gain.value = musicOn ? MUSIC_VOL : 0; musicBus.connect(master);
+    sfxBus = ctx.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
+    noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for(let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return ctx;
+  }
+
+  function tone(f, t, d, type, v, bus, o){
+    o = o || {};
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    const a = Math.min(o.a || 0.01, d * 0.5);
+    osc.type = type; osc.frequency.setValueAtTime(f, t);
+    if(o.to) osc.frequency.exponentialRampToValueAtTime(o.to, t + d);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t + a);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    osc.connect(g); g.connect(bus);
+    osc.start(t); osc.stop(t + d + 0.05);
+  }
+  function noise(t, d, v, bus, f0, f1, type){
+    const src = ctx.createBufferSource(); src.buffer = noiseBuf;
+    const flt = ctx.createBiquadFilter(); flt.type = type || 'highpass';
+    flt.frequency.setValueAtTime(f0, t);
+    if(f1) flt.frequency.exponentialRampToValueAtTime(f1, t + d);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(v, t + Math.min(0.01, d * 0.4));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    src.connect(flt); flt.connect(g); g.connect(bus);
+    src.start(t, Math.random() * 0.5); src.stop(t + d + 0.05);
+  }
+
+  /* ----- música de fundo (loop de 8 compassos; ganha camadas a cada passo do jogo) ----- */
+  function playStep(s, t){
+    const bar = (s >> 4) & 7, i = s & 15, c = CH[bar];
+    // base suave
+    if(i === 0) c.n.forEach(f => tone(f, t, S16 * 15.5, 'sine', 0.045, musicBus, {a:0.2}));
+    // baixo (com a oitava acima, para soar no alto-falante do celular)
+    if(i === 0 || i === 8){
+      const f = i === 0 ? c.r : c.r * 1.5;
+      tone(f, t, S16 * 7, 'triangle', 0.16, musicBus);
+      tone(f * 2, t, S16 * 5, 'sine', 0.07, musicBus);
+    }
+    // melodia (timbre de marimba / caixinha de música)
+    const m = LEAD[bar][i];
+    if(m){
+      const d = m[1] * S16 * 1.15;
+      tone(m[0], t, d, 'sine', 0.17, musicBus, {a:0.006});
+      tone(m[0] * 2, t, d * 0.6, 'triangle', 0.04, musicBus, {a:0.004});
+    }
+    if(level >= 1){
+      if(i === 6 || i === 14) c.n.forEach(f => tone(f, t, S16 * 1.6, 'triangle', 0.035, musicBus, {a:0.004}));
+      if(i % 2 === 0) noise(t, 0.04, 0.02, musicBus, 7500);
+    }
+    if(level >= 2){
+      if(i === 0 || i === 8) tone(150, t, 0.14, 'sine', 0.28, musicBus, {to:55, a:0.003});
+      if(i % 4 === 2) noise(t, 0.03, 0.014, musicBus, 9500);
+      if(i === 0 && (bar & 1) === 0) tone(c.n[2] * 4, t, S16 * 6, 'sine', 0.03, musicBus, {a:0.01});
+    }
+  }
+  function schedule(){
+    if(!ctx) return;
+    if(nextTime < ctx.currentTime - 0.1) nextTime = ctx.currentTime + 0.05;
+    while(nextTime < ctx.currentTime + 0.3){
+      playStep(stepN, nextTime);
+      nextTime += S16; stepN = (stepN + 1) % 128;
+    }
+  }
+  function startMusic(){
+    init(); if(!ctx || timer) return;
+    nextTime = ctx.currentTime + 0.15; stepN = 0;
+    timer = setInterval(schedule, 60);
+  }
+  function setMusicGain(){
+    if(musicBus && ctx) musicBus.gain.setTargetAtTime(musicOn ? (ducked ? 0.18 : MUSIC_VOL) : 0, ctx.currentTime, 0.15);
+  }
+
+  /* ----- efeitos sonoros ----- */
+  const ok = () => ctx && sfxOn;
+  const now = () => ctx.currentTime;
+
+  const api = {
+    unlock(){ return init(); },
+    shutdown(){ dead = true; if(timer){ clearInterval(timer); timer = null; } if(ctx){ try{ ctx.close(); }catch(e){} ctx = null; } },
+    startMusic,
+    setLevel(n){ level = n; },
+    duck(on){ ducked = on; setMusicGain(); },
+    toggleSfx(){ sfxOn = !sfxOn; return sfxOn; },
+    toggleMusic(){ musicOn = !musicOn; if(ctx) setMusicGain(); return musicOn; },
+    pause(h){ if(!ctx) return; if(h) ctx.suspend(); else ctx.resume(); },
+
+    tick(){ if(!ok()) return; tone(1000, now(), 0.04, 'square', 0.04, sfxBus); },
+    select(i){
+      if(!ok()) return; const f = 520 + (i || 0) * 80;
+      tone(f, now(), 0.1, 'sine', 0.2, sfxBus, {to:f * 1.5});
+    },
+    confirm(){
+      if(!ok()) return; const t = now();
+      [523.25, 659.25, 783.99].forEach((f, k) => tone(f, t + k * 0.07, 0.18, 'triangle', 0.16, sfxBus));
+      tone(1046.5, t + 0.21, 0.3, 'sine', 0.1, sfxBus);
+    },
+    drop(durMs){
+      if(!ok()) return; const t = now(), d = (durMs || 750) / 1000;
+      tone(900, t, 0.4, 'sine', 0.07, sfxBus, {to:220});
+      noise(t, 0.35, 0.04, sfxBus, 3000, 500, 'bandpass');
+      [[0.3636, 0.3], [0.7273, 0.15], [0.909, 0.08]].forEach(b => {
+        const tt = t + d * b[0];
+        tone(240, tt, 0.16, 'sine', b[1], sfxBus, {to:90});
+        noise(tt, 0.06, b[1] * 0.25, sfxBus, 900, null, 'lowpass');
+      });
+    },
+    sparkle(){
+      if(!ok()) return; const t = now(), N = [1047, 1175, 1319, 1568, 1760, 2093];
+      for(let k = 0; k < 8; k++) tone(N[(Math.random() * N.length) | 0], t + k * 0.06, 0.18, 'sine', 0.08, sfxBus);
+    },
+    whoosh(){
+      if(!ok()) return; const t = now();
+      noise(t, 0.4, 0.08, sfxBus, 300, 3500, 'bandpass');
+      tone(300, t, 0.4, 'sine', 0.05, sfxBus, {to:900});
+    },
+    bell(){
+      if(!ok()) return; const t = now();
+      [0, 0.28].forEach(o => {
+        tone(1760, t + o, 1.1, 'sine', 0.18, sfxBus);
+        tone(2637, t + o, 0.7, 'sine', 0.06, sfxBus);
+      });
+    },
+    boing(){ if(!ok()) return; tone(220, now(), 0.28, 'triangle', 0.22, sfxBus, {to:660}); },
+    pop(){
+      if(!ok()) return; const t = now();
+      noise(t, 0.05, 0.1, sfxBus, 2500);
+      tone(1400 + Math.random() * 600, t, 0.08, 'sine', 0.1, sfxBus, {to:500});
+    },
+    found(){
+      if(!ok()) return; const t = now();
+      tone(784, t, 0.2, 'sine', 0.15, sfxBus); tone(1175, t + 0.1, 0.3, 'sine', 0.12, sfxBus);
+    },
+    lost(){ if(!ok()) return; tone(500, now(), 0.25, 'sine', 0.1, sfxBus, {to:300}); },
+    victory(){
+      if(!ok()) return; const t = now();
+      api.duck(true); setTimeout(() => api.duck(false), 4500);
+      [[523.25,0,.14],[659.25,.15,.14],[783.99,.30,.14],[1046.5,.45,.30],
+       [783.99,.80,.12],[1046.5,.92,.12],[1318.5,1.04,.55]]
+        .forEach(m => tone(m[0], t + m[1], m[2], 'triangle', 0.2, sfxBus));
+      [523.25, 659.25, 783.99, 1046.5].forEach(f => tone(f, t + 1.04, 0.9, 'triangle', 0.06, sfxBus, {a:0.05}));
+      tone(392, t, 0.4, 'sine', 0.1, sfxBus); tone(523.25, t + 0.45, 0.3, 'sine', 0.1, sfxBus);
+      noise(t + 1.0, 1.4, 0.05, sfxBus, 1500, 2500, 'bandpass');   // "ooooh" da plateia
+      [2093, 2349, 2637, 3136].forEach((f, k) => tone(f, t + 1.6 + k * 0.07, 0.12, 'sine', 0.06, sfxBus));
+    }
+  };
+  return api;
+})();
+['pointerdown', 'touchend', 'click'].forEach(ev =>
+  document.addEventListener(ev, () => { Sound.unlock(); Sound.startMusic(); }, {passive:true}));
+</script>
+<script>
+/* =============== ORIENTAÇÃO DO CELULAR: mantém os modelos parados no ambiente quando o aparelho gira =============== */
+const Orient = (function(){
+  const D = Math.PI / 180;
+  const mul = (a, b) => [
+    a[3]*b[0] + a[0]*b[3] + a[1]*b[2] - a[2]*b[1],
+    a[3]*b[1] - a[0]*b[2] + a[1]*b[3] + a[2]*b[0],
+    a[3]*b[2] + a[0]*b[1] - a[1]*b[0] + a[2]*b[3],
+    a[3]*b[3] - a[0]*b[0] - a[1]*b[1] - a[2]*b[2]];
+  const inv = q => [-q[0], -q[1], -q[2], q[3]];
+  const rot = (q, v) => { const r = mul(mul(q, [v[0], v[1], v[2], 0]), inv(q)); return [r[0], r[1], r[2]]; };
+  function nlerp(a, b, k){
+    const s = (a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3]) < 0 ? -1 : 1;
+    const q = [0, 1, 2, 3].map(i => a[i] * (1 - k) + b[i] * s * k);
+    const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
+    return q.map(v => v / n);
+  }
+  function scaleRot(q, s){                 // mesma rotação, com o ângulo multiplicado por s
+    if(s === 1) return q;
+    let x = q[0], y = q[1], z = q[2], w = q[3];
+    if(w < 0){ x = -x; y = -y; z = -z; w = -w; }
+    const sn = Math.hypot(x, y, z);
+    if(sn < 1e-9) return [0, 0, 0, 1];
+    const h = Math.atan2(sn, w) * s, k = Math.sin(h) / sn;
+    return [x * k, y * k, z * k, Math.cos(h)];
+  }
+  // Aprende a "escala do giro": compara o quanto o giroscópio girou com o quanto o QR andou na câmera.
+  // (a câmera virtual do AR.js tem outro campo de visão que a câmera real; sem isso o modelo escorrega)
+  function makeCalib(){
+    const buf = []; let num = 0, den = 0;
+    const dot = (a, b) => a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
+    return {
+      push(t, qg, dir){
+        buf.push({ t, qg: qg.slice(), dir });
+        while(buf.length > 2 && t - buf[0].t > 600) buf.shift();
+        let old = null;
+        for(const s of buf){ if(t - s.t >= 110) old = s; else break; }
+        if(!old) return;
+        const R = mul(inv(qg), old.qg), pr = rot(R, old.dir);
+        const dp = [pr[0]-old.dir[0], pr[1]-old.dir[1], pr[2]-old.dir[2]];
+        const dobs = [dir[0]-old.dir[0], dir[1]-old.dir[1], dir[2]-old.dir[2]];
+        const m = dot(dp, dp);
+        if(m < 1.4e-4 || dot(dobs, dobs) > 0.25) return;        // quase parado, ou o QR "pulou"
+        num = num * 0.99 + dot(dobs, dp); den = den * 0.99 + m;
+      },
+      get(){ return den > 0.01 ? num / den : null; },
+      weight(){ return den; },
+      reset(){ buf.length = 0; }
+    };
+  }
+  // orientação da câmera no mundo (mesma convenção do three.js DeviceOrientationControls)
+  function fromDevice(alpha, beta, gamma, screenAngle){
+    const x = beta * D, y = alpha * D, z = -gamma * D;
+    const c1 = Math.cos(x/2), c2 = Math.cos(y/2), c3 = Math.cos(z/2), s1 = Math.sin(x/2), s2 = Math.sin(y/2), s3 = Math.sin(z/2);
+    let q = [s1*c2*c3 + c1*s2*s3, c1*s2*c3 - s1*c2*s3, c1*c2*s3 - s1*s2*c3, c1*c2*c3 + s1*s2*s3];   // Euler YXZ
+    q = mul(q, [-Math.SQRT1_2, 0, 0, Math.SQRT1_2]);                    // a câmera olha para trás do aparelho
+    const h = -(screenAngle || 0) * D / 2;
+    return mul(q, [0, 0, Math.sin(h), Math.cos(h)]);                   // giro da tela
+  }
+  let raw = null, sm = null, qMark = null, listening = false;
+  function onEvent(e){
+    if(e.alpha == null || e.beta == null || e.gamma == null) return;
+    const ang = (window.screen && screen.orientation && typeof screen.orientation.angle === 'number') ? screen.orientation.angle : (window.orientation || 0);
+    raw = fromDevice(e.alpha, e.beta, e.gamma, ang);
+  }
+  const api = {
+    start(){ if(listening) return; listening = true; window.addEventListener('deviceorientation', onEvent, true); },
+    async request(){                       // iPhone exige um toque para liberar os sensores
+      api.start();                         // o ouvinte é sempre ligado; sem permissão os eventos só não chegam
+      try{
+        if(typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function')
+          return (await DeviceOrientationEvent.requestPermission()) === 'granted';
+      }catch(e){ return false; }
+      return true;
+    },
+    update(){ if(!raw) return; sm = sm ? nlerp(sm, raw, 0.7) : raw.slice(); },
+    current(){ return sm; },
+    mark(){ qMark = sm ? sm.slice() : null; return !!qMark; },
+    clear(){ qMark = null; },
+    delta(scale){ return (sm && qMark) ? scaleRot(mul(inv(sm), qMark), scale == null ? 1 : scale) : null; },   // giro desde o "mark"
+    makeCalib,
+    math: { mul, inv, rot, fromDevice, scaleRot, nlerp }
+  };
+  return api;
+})();
+</script>
+<script>
+function initGame(){
+  'use strict';
+
+  /* ---------------- Dados do jogo ---------------- */
+  const MASSAS = [
+    {id:'padrao',    label:'Massa padrão',      color:'#EBCB8B'},
+    {id:'cenoura',   label:'Cenoura',           color:'#F0A04B'},
+    {id:'espinafre', label:'Espinafre',         color:'#7FB069'},
+    {id:'beterraba', label:'Beterraba',         color:'#B5456E'},
+    {id:'tomate',    label:'Tomate',            color:'#E0654A'},
+    {id:'curcuma',   label:'Cúrcuma',           color:'#F2C230'},
+    {id:'carvao',    label:'Carvão ativado',    color:'#3A3A3F'},
+    {id:'integral',  label:'Integral',          color:'#B98B5A'},
+    {id:'espirulina',label:'Espirulina (azul)', color:'#4FB3C8'},
+    {id:'pitaya',    label:'Pitaya (rosa)',     color:'#E85A9B'}
+  ];
+  // kind: 'smooth' = pasta/molho (pincel redondo) · 'slice' = fatias (carimbo de quadradinhos)
+  const COBERTURAS = [
+    {id:'molho',     label:'Molho de tomate',        color:'#D6402B', kind:'smooth'},
+    {id:'queijo',    label:'Fatias de queijo',       color:'#FFD35A', edge:'#E0A92A', kind:'slice'},
+    {id:'presunto',  label:'Fatias de presunto',     color:'#F3A3A8', edge:'#D9767F', kind:'slice'},
+    {id:'peru',      label:'Fatias de peito de peru',color:'#E8C3A5', edge:'#C99B78', kind:'slice'},
+    {id:'chocolate', label:'Chocolate',              color:'#4A2A1A', kind:'smooth'},
+    {id:'avela',     label:'Creme de avelã',         color:'#7B4A2D', kind:'smooth'},
+    {id:'catupiry',  label:'Catupiry',               color:'#FFF6E0', kind:'smooth'},
+    {id:'mussarela', label:'Mussarela derretida',    color:'#FFE9A0', kind:'smooth'},
+    {id:'goiabada',  label:'Goiabada',               color:'#A3202C', kind:'smooth'},
+    {id:'doceleite', label:'Doce de leite',          color:'#C98A4B', kind:'smooth'},
+    {id:'condensado',label:'Leite condensado',       color:'#FFFBEF', kind:'smooth'},
+    {id:'geleia',    label:'Geleia de morango',      color:'#D9335A', kind:'smooth'},
+    {id:'pesto',     label:'Pesto',                  color:'#6C9A3C', kind:'smooth'}
+  ];
+
+  const CONFETTI_COLORS = ['#FF6B9D','#FFD93D','#6BCB77','#4D96FF','#B983FF','#FF9F45'];
+
+  const $ = s => document.querySelector(s);
+  const TH = AFRAME.THREE;
+  const state = { step:0, selected:null, choice:{}, brush:null, painted:false, used:new Set() };
+
+  const el = {
+    title:$('#title'), say:$('#say'), options:$('#options'), summary:$('#summary'),
+    main:$('#mainBtn'), dots:[...document.querySelectorAll('#dots i')], stepLabel:$('#stepLabel'),
+    hint:$('#hint'), banner:$('#banner'), mute:$('#muteBtn'),
+    pizza:$('#pizza'), gDough:$('#gDough'), pizzaTop:$('#pizzaTop'), confetti:$('#confetti'),
+    chefBody:$('#chefBody'), armL:$('#armL'), armR:$('#armR'),
+    head:$('#chefHead'), eyeL:$('#eyeL'), eyeR:$('#eyeR')
+  };
+
+  /* ---------------- Áudio (usa o módulo Sound definido acima) ---------------- */
+  el.mute.addEventListener('click', () => {
+    Sound.unlock();
+    const on = Sound.toggleSfx();
+    el.mute.textContent = on ? '🔊' : '🔇';
+    if(on) Sound.tick();
+  });
+  const musicBtn = $('#musicBtn');
+  musicBtn.addEventListener('click', () => {
+    Sound.unlock();
+    const on = Sound.toggleMusic();
+    musicBtn.classList.toggle('off', !on);
+    musicBtn.setAttribute('aria-pressed', String(on));
+    if(on) Sound.tick();
+  });
+  document.addEventListener('visibilitychange', () => Sound.pause(document.hidden));
+
+  /* ---------------- Utilidades 3D ---------------- */
+  function make(parent, tag, attrs){
+    const e = document.createElement(tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    parent.appendChild(e); return e;
+  }
+  function paint(sel, color){
+    document.querySelectorAll(sel).forEach(e => e.setAttribute('color', color));
+  }
+  function easeOutBounce(x){
+    const n1 = 7.5625, d1 = 2.75;
+    if(x < 1/d1) return n1*x*x;
+    if(x < 2/d1) return n1*(x -= 1.5/d1)*x + .75;
+    if(x < 2.5/d1) return n1*(x -= 2.25/d1)*x + .9375;
+    return n1*(x -= 2.625/d1)*x + .984375;
+  }
+  // a massa "cai" sobre o prato
+  function drop(group, h, dur){
+    group.setAttribute('visible', true);
+    Sound.drop(dur);
+    const token = {}; group.__tw = token;
+    const t0 = performance.now();
+    (function step(now){
+      if(group.__tw !== token) return;
+      const k = Math.min(1, (now - t0) / dur);
+      group.object3D.position.y = h * (1 - easeOutBounce(k));
+      if(k < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  function hideGroup(group){
+    group.__tw = null;
+    group.object3D.position.y = 0;
+    group.setAttribute('visible', false);
+  }
+
+  // cor da borda = a cor da massa um pouco mais "assada"
+  function shade(hex, f){
+    const n = parseInt(hex.slice(1), 16);
+    let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    const lum = (0.3*r + 0.59*g + 0.11*b) / 255;
+    if(lum < 0.3) f = 1.5;                               // massas escuras: borda um pouco mais clara
+    const c = v => Math.max(0, Math.min(255, Math.round(v * f)));
+    return '#' + [c(r), c(g), c(b)].map(v => v.toString(16).padStart(2, '0')).join('');
+  }
+  function setDough(color){
+    paint('.dough', color);
+    paint('.crust', shade(color, 0.86));
+  }
+
+  /* =====================================================================
+     PIZZA: cobertura desenhada, metades e ingredientes (objetos 3D leves)
+     ===================================================================== */
+  const PZ_TOP = 0.553;                                   // altura da superfície da massa
+  const PZ = { S:512, RO:0.262, RP:0.246 };               // textura (px), raio do desenho, raio permitido (sem a borda)
+  const PXU = PZ.S / (2 * PZ.RO);                         // pixels por unidade do mundo
+  const pz = { ready:false, root:null, paint:null, ctx:null, tex:null, line:null, hl:{}, ing:null };
+  const fx = [];                                          // ingredientes caindo
+  const rr = (a, b) => a + Math.random() * (b - a);
+
+  /* ---- modelos dos ingredientes (geometrias e materiais compartilhados) ---- */
+  const GC = {}, MC = {};
+  const geo = (k, f) => GC[k] || (GC[k] = f());
+  const mt = c => MC[c] || (MC[c] = new TH.MeshStandardMaterial({ color:c, roughness:0.75, metalness:0 }));
+  const SPH  = () => geo('sph',  () => new TH.SphereGeometry(1, 12, 8));
+  const CYL  = () => geo('cyl',  () => new TH.CylinderGeometry(1, 1, 1, 18));
+  const BOX  = () => geo('box',  () => new TH.BoxGeometry(1, 1, 1));
+  const TOR  = () => geo('tor',  () => new TH.TorusGeometry(1, 0.28, 8, 20));
+  const TOR2 = () => geo('tor2', () => new TH.TorusGeometry(1, 0.46, 8, 20));
+  const FLAT = Math.PI / 2;
+  function part(g, geom, color, x, y, z, s, r){
+    const m = new TH.Mesh(geom, mt(color));
+    m.position.set(x, y, z);
+    if(s) m.scale.set(s[0], s[1], s[2]);
+    if(r) m.rotation.set(r[0], r[1], r[2]);
+    g.add(m); return m;
+  }
+  const spread = (r) => { const a = Math.random() * 6.283, d = Math.sqrt(Math.random()) * r; return [Math.cos(a) * d, Math.sin(a) * d]; };
+
+  const ING = [
+    {id:'azeitonav', label:'Azeitona verde', emoji:'🫒', color:'#6E8B2A', build(g){
+      part(g, TOR2(), '#6E8B2A', 0, 0.0075, 0, [0.016,0.016,0.016], [FLAT,0,0]);
+      part(g, SPH(), '#D6402B', 0, 0.004, 0, [0.0058,0.004,0.0058]); }},
+    {id:'azeitonap', label:'Azeitona preta', color:'#221C20', build(g){
+      part(g, TOR2(), '#221C20', 0, 0.0072, 0, [0.015,0.015,0.015], [FLAT,0,0]); }},
+    {id:'tomate', label:'Tomate', emoji:'🍅', color:'#D93A2B', build(g){
+      part(g, CYL(), '#D93A2B', 0, 0.004, 0, [0.032,0.008,0.032]);
+      part(g, CYL(), '#F2705A', 0, 0.0043, 0, [0.022,0.0085,0.022]);
+      for(let i = 0; i < 4; i++) part(g, SPH(), '#FFE79A', Math.cos(i*1.57+.4)*0.013, 0.0088, Math.sin(i*1.57+.4)*0.013, [0.0035,0.002,0.0035]); }},
+    {id:'calabresa', label:'Calabresa', color:'#B5412E', build(g){
+      part(g, CYL(), '#B5412E', 0, 0.0035, 0, [0.029,0.007,0.029]);
+      for(let i = 0; i < 4; i++) part(g, CYL(), '#F0B49F', Math.cos(i*1.57+.7)*0.014, 0.0037, Math.sin(i*1.57+.7)*0.014, [0.0045,0.0075,0.0045]); }},
+    {id:'milho', label:'Grãos de milho', emoji:'🌽', color:'#F6CF2D', build(g){
+      for(let i = 0; i < 6; i++){ const p = spread(0.02); part(g, SPH(), '#F6CF2D', p[0], 0.0062, p[1], [0.0075,0.0065,0.0075]); } }},
+    {id:'ervilha', label:'Ervilhas', color:'#6FB544', build(g){
+      for(let i = 0; i < 4; i++){ const p = spread(0.02); part(g, SPH(), '#6FB544', p[0], 0.0092, p[1], [0.0095,0.0095,0.0095]); } }},
+    {id:'frango', label:'Frango desfiado', emoji:'🍗', color:'#EAD6B2', build(g){
+      for(let i = 0; i < 5; i++){ const p = spread(0.02); part(g, BOX(), '#EAD6B2', p[0], 0.0025, p[1], [0.04,0.0045,0.009], [0, rr(0,3.14), 0]); } }},
+    {id:'palmito', label:'Palmito', color:'#F4E7BD', build(g){
+      part(g, CYL(), '#F4E7BD', 0, 0.005, 0, [0.018,0.01,0.018]);
+      part(g, CYL(), '#E9D49A', 0, 0.0052, 0, [0.009,0.0102,0.009]); }},
+    {id:'mussarela', label:'Mussarela fatiada', emoji:'🧀', color:'#FFEFA8', build(g){
+      part(g, BOX(), '#FFEFA8', 0, 0.002, 0, [0.055,0.004,0.05], [0, rr(0,3.14), 0]); }},
+    {id:'presunto', label:'Presunto ralado', color:'#EC9A98', build(g){
+      for(let i = 0; i < 7; i++){ const p = spread(0.025); part(g, BOX(), '#EC9A98', p[0], 0.0015, p[1], [0.014,0.003,0.004], [0, rr(0,3.14), 0]); } }},
+    {id:'brocolis', label:'Brócolis', emoji:'🥦', color:'#2E7D32', build(g){
+      part(g, CYL(), '#8CC152', 0, 0.011, 0, [0.006,0.022,0.006]);
+      part(g, SPH(), '#2E7D32', 0, 0.03, 0, [0.016,0.016,0.016]);
+      part(g, SPH(), '#2E7D32', 0.012, 0.025, 0.005, [0.013,0.013,0.013]);
+      part(g, SPH(), '#2E7D32', -0.01, 0.025, -0.007, [0.013,0.013,0.013]); }},
+    {id:'cebola', label:'Cebola', emoji:'🧅', color:'#E6D2EA', build(g){
+      part(g, TOR(), '#F0E4F0', 0, 0.0062, 0, [0.022,0.022,0.022], [FLAT,0,0]);
+      part(g, TOR(), '#E6D2EA', 0, 0.0036, 0, [0.013,0.013,0.013], [FLAT,0,0]); }},
+    {id:'tomateseco', label:'Tomate seco', color:'#8E1B1B', build(g){
+      part(g, SPH(), '#8E1B1B', 0, 0.007, 0, [0.026,0.009,0.015], [0, rr(0,3.14), 0]);
+      part(g, SPH(), '#A32525', 0.01, 0.007, 0.018, [0.018,0.007,0.011], [0, rr(0,3.14), 0]); }},
+    {id:'rucula', label:'Rúcula', emoji:'🥬', color:'#4E9A3A', build(g){
+      for(let i = 0; i < 3; i++){ const a = i * 2.1 + rr(0,.5);
+        part(g, SPH(), i%2 ? '#3F8A32' : '#4E9A3A', Math.cos(a)*0.014, 0.0035, Math.sin(a)*0.014, [0.028,0.004,0.013], [0, -a, 0]); } }},
+    {id:'carne', label:'Carne', emoji:'🥩', color:'#6B3A24', build(g){
+      for(let i = 0; i < 3; i++){ const p = spread(0.02); part(g, BOX(), '#6B3A24', p[0], 0.006, p[1], [0.022,0.012,0.02], [0, rr(0,3.14), 0]); } }},
+    {id:'morango', label:'Morango', emoji:'🍓', color:'#E0303F', build(g){
+      part(g, SPH(), '#E0303F', 0, 0.016, 0, [0.02,0.017,0.02]);
+      part(g, SPH(), '#3E9B4F', 0, 0.031, 0, [0.012,0.004,0.012]);
+      for(let i = 0; i < 4; i++) part(g, SPH(), '#FFE066', Math.cos(i*1.6)*0.016, 0.017+(i%2)*0.006, Math.sin(i*1.6)*0.016, [0.0025,0.0025,0.0025]); }},
+    {id:'uva', label:'Uvas', emoji:'🍇', color:'#6A3A8C', build(g){
+      part(g, SPH(), '#6A3A8C', 0, 0.014, -0.009, [0.014,0.014,0.014]);
+      part(g, SPH(), '#7A4A9C', 0.011, 0.014, 0.008, [0.014,0.014,0.014]);
+      part(g, SPH(), '#5C2F7C', -0.011, 0.014, 0.008, [0.014,0.014,0.014]); }},
+    {id:'kiwi', label:'Kiwi', emoji:'🥝', color:'#7DB04A', build(g){
+      part(g, CYL(), '#7DB04A', 0, 0.0035, 0, [0.03,0.007,0.03]);
+      part(g, CYL(), '#D8E8A0', 0, 0.0037, 0, [0.0145,0.0074,0.0145]);
+      for(let i = 0; i < 8; i++) part(g, SPH(), '#2B2B1E', Math.cos(i*.785)*0.0105, 0.0076, Math.sin(i*.785)*0.0105, [0.0018,0.0012,0.0018]); }},
+    {id:'manjericao', label:'Manjericão', emoji:'🌿', color:'#2F8F3A', build(g){
+      part(g, SPH(), '#2F8F3A', 0.011, 0.003, 0.004, [0.02,0.004,0.011], [0, -0.6, 0]);
+      part(g, SPH(), '#3AA047', -0.011, 0.004, -0.004, [0.02,0.004,0.011], [0, 0.6, 0]); }},
+    {id:'champignon', label:'Champignon', emoji:'🍄', color:'#E6D9C6', build(g){
+      part(g, SPH(), '#E6D9C6', 0, 0.006, 0, [0.024,0.012,0.024]);
+      part(g, SPH(), '#F3EBDD', 0, 0.0095, 0, [0.017,0.005,0.017]); }},
+    {id:'pimentao', label:'Pimentão', emoji:'🫑', color:'#E8352B', build(g, k){
+      part(g, TOR(), ['#E8352B','#F2B01E','#4CA832'][k % 3], 0, 0.0055, 0, [0.019,0.019,0.019], [FLAT,0,0]); }},
+    {id:'abacaxi', label:'Abacaxi', emoji:'🍍', color:'#F5D44A', build(g){
+      part(g, BOX(), '#F5D44A', -0.014, 0.0035, 0, [0.03,0.007,0.022], [0, rr(0,1), 0]);
+      part(g, BOX(), '#F2CB3A', 0.016, 0.0035, 0.008, [0.03,0.007,0.022], [0, rr(0,1), 0]); }},
+    {id:'bacon', label:'Bacon', emoji:'🥓', color:'#B34A3A', build(g){
+      const a = rr(0, 3.14);
+      for(let s = -1; s <= 1; s += 2){
+        const ox = Math.cos(a + 1.57) * 0.01 * s, oz = Math.sin(a + 1.57) * 0.01 * s;
+        part(g, BOX(), '#B34A3A', ox, 0.002, oz, [0.05,0.004,0.012], [0, -a, 0]);
+        part(g, BOX(), '#F0B8A0', ox, 0.0022, oz, [0.05,0.0042,0.004], [0, -a, 0]);
+      } }},
+    {id:'ovo', label:'Ovo de codorna', emoji:'🥚', color:'#FFFDF4', build(g){
+      part(g, SPH(), '#FFFDF4', 0, 0.004, 0, [0.022,0.01,0.022]);
+      part(g, SPH(), '#F5B71E', 0, 0.0095, 0, [0.009,0.007,0.009]); }},
+    {id:'banana', label:'Banana', emoji:'🍌', color:'#F7E27A', build(g){
+      part(g, CYL(), '#F7E27A', 0, 0.0035, 0, [0.028,0.007,0.028]);
+      part(g, CYL(), '#EAD05C', 0, 0.0037, 0, [0.01,0.0072,0.01]); }},
+    {id:'cereja', label:'Cereja', emoji:'🍒', color:'#B5122E', build(g){
+      part(g, SPH(), '#B5122E', 0, 0.014, 0, [0.014,0.014,0.014]);
+      part(g, CYL(), '#4A3525', 0.006, 0.03, 0, [0.0016,0.03,0.0016], [0, 0, -0.35]); }},
+    {id:'coco', label:'Coco ralado', emoji:'🥥', color:'#FFFDF5', build(g){
+      for(let i = 0; i < 8; i++){ const p = spread(0.025); part(g, BOX(), '#FFFDF5', p[0], 0.0015, p[1], [0.012,0.003,0.004], [0, rr(0,3.14), 0]); } }},
+    {id:'granulado', label:'Granulado', color:'#4A2A1A', build(g){
+      for(let i = 0; i < 8; i++){ const p = spread(0.025); part(g, BOX(), '#4A2A1A', p[0], 0.002, p[1], [0.011,0.004,0.004], [0, rr(0,3.14), 0]); } }}
+  ];
+
+  const stepOptions = s => s === 0 ? MASSAS : s === 1 ? COBERTURAS : ING;
+  const STEPS = [
+    { title:'1. Escolha a massa',        say:'Qual massa vamos preparar hoje? 🥣' },
+    { title:'2. Cubra a massa',          say:'Escolha a cobertura e desenhe com o dedo sobre a massa (menos na borda!) 👆' },
+    { title:'3. Ingredientes · 1ª metade', say:'Escolha os ingredientes da metade que está brilhando ✨', multi:true },
+    { title:'4. Ingredientes · 2ª metade', say:'Agora os ingredientes da outra metade ✨', multi:true }
+  ];
+
+  /* ---- objetos 3D da pizza (criados quando a cena está pronta) ---- */
+  function buildPizzaTop(){
+    if(pz.ready || !el.pizzaTop.object3D) return;
+    const root = new TH.Group();
+    const cv = document.createElement('canvas'); cv.width = cv.height = PZ.S;
+    const tex = new TH.CanvasTexture(cv);
+    if(TH.sRGBEncoding !== undefined) tex.encoding = TH.sRGBEncoding;
+    tex.anisotropy = 4;
+    const pm = new TH.Mesh(new TH.CircleGeometry(PZ.RO, 64),
+      new TH.MeshStandardMaterial({ map:tex, transparent:true, roughness:0.55, metalness:0, depthWrite:false }));
+    pm.rotation.x = -Math.PI / 2; pm.position.y = PZ_TOP; pm.visible = false;
+    root.add(pm);
+
+    const ln = new TH.Mesh(new TH.BoxGeometry(0.003, 0.002, 0.5),
+      new TH.MeshBasicMaterial({ color:0xFFFFFF, transparent:true, opacity:0.55, depthWrite:false }));
+    ln.position.y = PZ_TOP + 0.0015; ln.visible = false; root.add(ln);
+
+    [1, -1].forEach(side => {
+      const h = new TH.Mesh(new TH.CircleGeometry(0.25, 48, side > 0 ? -Math.PI / 2 : Math.PI / 2, Math.PI),
+        new TH.MeshBasicMaterial({ color:0xFFFFFF, transparent:true, opacity:0.25, depthWrite:false }));
+      h.rotation.x = -Math.PI / 2; h.position.y = PZ_TOP + 0.002; h.visible = false;
+      root.add(h); pz.hl[side] = h;
+    });
+    const ing = new TH.Group(); root.add(ing);
+
+    el.pizzaTop.setObject3D('stuff', root);
+    Object.assign(pz, { ready:true, root, paint:pm, ctx:cv.getContext('2d'), tex, line:ln, ing });
+  }
+  (function whenReady(){
+    const sc = document.querySelector('a-scene');
+    if(!sc) return;
+    const go = () => buildPizzaTop();
+    if(sc.hasLoaded) go(); else sc.addEventListener('loaded', go);
+  })();
+
+  function setHighlight(side){                           // 1 = metade +x · -1 = metade -x · 0 = nenhuma
+    if(!pz.ready) return;
+    pz.hl[1].visible = side === 1; pz.hl[-1].visible = side === -1;
+  }
+
+  /* ---- desenhar a cobertura com o dedo ---- */
+  const toCv = (x, z) => [(x / PZ.RO + 1) / 2 * PZ.S, (z / PZ.RO + 1) / 2 * PZ.S];
+  function stampSlice(ctx, x, y, size, rot, cov){
+    ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+    const h = size / 2, r = size * 0.12;
+    ctx.beginPath(); ctx.moveTo(-h + r, -h);
+    ctx.arcTo(h, -h, h, h, r); ctx.arcTo(h, h, -h, h, r); ctx.arcTo(-h, h, -h, -h, r); ctx.arcTo(-h, -h, h, -h, r);
+    ctx.closePath();
+    ctx.fillStyle = cov.color; ctx.fill();
+    ctx.lineWidth = Math.max(2, size * 0.06); ctx.strokeStyle = cov.edge; ctx.stroke();
+    ctx.restore();
+  }
+  function clipDisc(ctx){ ctx.save(); ctx.beginPath(); ctx.arc(PZ.S / 2, PZ.S / 2, PZ.RP * PXU, 0, Math.PI * 2); ctx.clip(); }
+  function covOf(){ return COBERTURAS.find(c => c.id === state.brush); }
+  let carry = 0;
+  function markPainted(cov){
+    state.painted = true; state.used.add(cov.id);
+    pz.tex.needsUpdate = true;
+    el.main.disabled = !hasSelection();
+  }
+  function paintSeg(a, b, first){
+    const cov = covOf(); if(!cov || !pz.ready) return;
+    const ctx = pz.ctx, A = toCv(a[0], a[1]), B = toCv(b[0], b[1]);
+    clipDisc(ctx);
+    const dx = B[0] - A[0], dy = B[1] - A[1], dist = Math.hypot(dx, dy);
+    if(cov.kind === 'slice'){
+      const size = 0.05 * PXU, gap = 0.038 * PXU;
+      if(first){ stampSlice(ctx, A[0], A[1], size, rr(-.5, .5), cov); carry = 0; }
+      let d = gap - carry;
+      while(d <= dist){ const k = dist ? d / dist : 0; stampSlice(ctx, A[0] + dx * k, A[1] + dy * k, size, rr(-.5, .5), cov); d += gap; }
+      carry = dist - (d - gap);
+    } else {
+      const rad = 0.03 * PXU;
+      ctx.fillStyle = ctx.strokeStyle = cov.color; ctx.lineWidth = rad * 2; ctx.lineCap = ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.arc(B[0], B[1], rad, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(B[0], B[1]); ctx.stroke();
+    }
+    ctx.restore();
+    markPainted(cov);
+  }
+  function fillAll(){
+    const cov = covOf(); if(!cov){ flashHint('👆 Escolha uma cobertura primeiro'); return; }
+    if(!pz.ready) return;
+    const ctx = pz.ctx, S = PZ.S;
+    clipDisc(ctx);
+    if(cov.kind === 'slice'){
+      const size = 0.05 * PXU, gap = 0.04 * PXU;
+      for(let y = 0; y < S + gap; y += gap) for(let x = (Math.round(y / gap) % 2) * gap / 2; x < S + gap; x += gap)
+        stampSlice(ctx, x + rr(-3, 3), y + rr(-3, 3), size, rr(-.5, .5), cov);
+    } else { ctx.fillStyle = cov.color; ctx.fillRect(0, 0, S, S); }
+    ctx.restore();
+    markPainted(cov); Sound.sparkle();
+  }
+  function clearPaint(){
+    if(pz.ready){ pz.ctx.clearRect(0, 0, PZ.S, PZ.S); pz.tex.needsUpdate = true; }
+    state.painted = false; state.used.clear(); carry = 0;
+    el.main.disabled = !hasSelection();
+  }
+
+  // toque na tela -> ponto sobre a massa (coordenadas locais da pizza)
+  function hitPizza(cx, cy){
+    const scn_ = document.querySelector('a-scene');
+    const cam = scn_ && scn_.camera, cvs = scn_ && scn_.canvas;
+    if(!cam || !cvs || !pz.root) return null;
+    const r = cvs.getBoundingClientRect(); if(!r.width || !r.height) return null;
+    const nx = ((cx - r.left) / r.width) * 2 - 1, ny = -((cy - r.top) / r.height) * 2 + 1;
+    cam.updateMatrixWorld(true);
+    const inv = new TH.Matrix4().copy(cam.projectionMatrix).invert();
+    const o = new TH.Vector3().setFromMatrixPosition(cam.matrixWorld);
+    const d = new TH.Vector3(nx, ny, 0.5).applyMatrix4(inv).applyMatrix4(cam.matrixWorld).sub(o).normalize();
+    pz.root.updateWorldMatrix(true, false);
+    const mi = new TH.Matrix4().copy(pz.root.matrixWorld).invert();
+    const o2 = o.clone().applyMatrix4(mi), d2 = o.clone().add(d).applyMatrix4(mi).sub(o2);
+    if(Math.abs(d2.y) < 1e-9) return null;
+    const t = (PZ_TOP - o2.y) / d2.y; if(t <= 0) return null;
+    return [o2.x + d2.x * t, o2.z + d2.z * t];
+  }
+  let drawing = false, lastP = null;
+  const UI_SEL = '#panel,button,#confirmClose,#bye,#start,#markerView';
+  window.addEventListener('pointerdown', e => {
+    if(state.step !== 1 || !placed || closed || !pz.ready) return;
+    if(e.target.closest && e.target.closest(UI_SEL)) return;
+    if(!covOf()){ flashHint('👆 Escolha uma cobertura no painel'); return; }
+    const p = hitPizza(e.clientX, e.clientY); if(!p) return;
+    drawing = true; lastP = p; paintSeg(p, p, true);
+  }, true);
+  window.addEventListener('pointermove', e => {
+    if(!drawing) return;
+    const p = hitPizza(e.clientX, e.clientY); if(!p) return;
+    paintSeg(lastP, p, false); lastP = p;
+  }, true);
+  const stopDraw = () => { drawing = false; lastP = null; };
+  window.addEventListener('pointerup', stopDraw, true);
+  window.addEventListener('pointercancel', stopDraw, true);
+
+  /* ---- ingredientes de uma metade ---- */
+  function addToppings(side, ids){
+    if(!pz.ready) return;
+    const list = ids.map(id => ING.find(x => x.id === id)).filter(Boolean);
+    if(!list.length) return;
+    const n = Math.min(32, Math.max(14, list.length * 3));
+    const pts = []; let dmin = 0.058, fails = 0, guard = 0;
+    while(pts.length < n && guard++ < 3000){
+      const r = 0.212 * Math.sqrt(Math.random()), a = Math.random() * Math.PI * 2;
+      const x = Math.cos(a) * r, z = Math.sin(a) * r;
+      if(side * x < 0.03) continue;                       // fica só na sua metade
+      if(pts.every(p => Math.hypot(p[0] - x, p[1] - z) > dmin)) pts.push([x, z]);
+      else if(++fails % 60 === 0) dmin *= 0.9;
+    }
+    const t0 = performance.now();
+    pts.forEach((p, i) => {
+      const ing = list[i % list.length];
+      const g = new TH.Group();
+      ing.build(g, i);
+      const s = rr(0.92, 1.15);
+      g.rotation.y = rr(0, 6.28);
+      g.position.set(p[0], PZ_TOP, p[1]);
+      g.scale.setScalar(0.01); g.visible = false;
+      pz.ing.add(g);
+      fx.push({ g, t0, delay: 120 + i * 40, dur: 520, s, y1: PZ_TOP, pop: i % 3 === 0, started: false });
+    });
+    setTimeout(() => Sound.sparkle(), 500);
+  }
+  function clearToppings(){
+    if(pz.ing) while(pz.ing.children.length) pz.ing.remove(pz.ing.children[0]);
+    fx.length = 0;
+  }
+  function updatePizzaFX(now, dt){
+    for(let i = fx.length - 1; i >= 0; i--){
+      const f = fx[i], k = (now - f.t0 - f.delay) / f.dur;
+      if(k < 0) continue;
+      if(!f.started){ f.started = true; f.g.visible = true; if(f.pop) Sound.pop(); }
+      if(k >= 1){ f.g.position.y = f.y1; f.g.scale.setScalar(f.s); fx.splice(i, 1); }
+      else {
+        f.g.position.y = f.y1 + 0.3 * (1 - easeOutBounce(k));
+        f.g.scale.setScalar(f.s * (0.3 + 0.7 * Math.min(1, k * 3)));
+      }
+    }
+    if(pz.ready){                                         // metade brilhando (pulsa)
+      const o = 0.2 + 0.14 * Math.sin(now / 240);
+      [1, -1].forEach(sd => { if(pz.hl[sd].visible) pz.hl[sd].material.opacity = o; });
+    }
+    if(state.step >= 5 && el.pizza.object3D) el.pizza.object3D.rotation.y += dt * 0.5;   // pizza pronta gira devagar
+  }
+
+  /* ---------------- Confete e animação (loop) ---------------- */
+  const JUMP_DUR = 2600;
+  let jumpT0 = null, lastT = performance.now(), lastJump = -1;
+  const confetti = [];
+
+  function spawnConfetti(){
+    for(let i = 0; i < 40; i++){
+      const e = make(el.confetti, 'a-box', {
+        position:`${(Math.random()-.5)*1.4} ${1.0+Math.random()*0.8} ${(Math.random()-.5)*1.2}`,
+        width:'0.035', height:'0.035', depth:'0.006',
+        color: CONFETTI_COLORS[(Math.random()*CONFETTI_COLORS.length)|0]
+      });
+      const p = { e, ready:false, vy:0.35+Math.random()*0.45, sp:(Math.random()-.5)*8 };
+      e.addEventListener('loaded', () => { p.ready = true; });
+      confetti.push(p);
+    }
+  }
+  function clearConfetti(){ confetti.length = 0; el.confetti.innerHTML = ''; }
+
+  function loop(now){
+    if(closed) return;
+    const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+    const D = Math.PI / 180;
+    updateAnchor(now);
+    updatePizzaFX(now, dt);
+    if(!el.chefBody.object3D || !el.head.object3D || !el.armL.object3D || !el.armR.object3D || !el.eyeL.object3D || !el.eyeR.object3D){
+      requestAnimationFrame(loop); return;
+    }
+    const T = now / 1000;
+    let angL = 60 + Math.sin(T * 1.3) * 4;              // braços balançam de leve
+    let angR = 60 + Math.sin(T * 1.3 + 1.6) * 4;
+    let bodyY = Math.sin(T * 1.7) * 0.008;              // respiração
+    let jumping = false;
+
+    if(jumpT0 !== null){
+      const t = now - jumpT0;
+      if(t >= JUMP_DUR){ jumpT0 = null; }
+      else {
+        const s = Math.abs(Math.sin((t / JUMP_DUR) * Math.PI * 5));
+        jumping = true;
+        bodyY = s * 0.32;
+        const kj = Math.floor(t / (JUMP_DUR / 5));
+        if(kj !== lastJump){ lastJump = kj; Sound.boing(); Sound.pop(); }
+        angL = angR = 60 + s * 85;                      // braços para cima ao pular
+      }
+    }
+
+    // ---- tchauzinho e beijinho, de vez em quando ----
+    let aw = 0, eyeShut = 0, headRoll = 0, armFwd = 0;
+    const seen = placed || !!(marker.object3D && marker.object3D.visible);
+    if(!seen) nextAnim = Math.max(nextAnim, now + 6000);
+    if(jumping){ anim = null; }
+    else if(!anim && seen && now > nextAnim && document.visibilityState !== 'hidden'){ startAnim(pickAnim()); }
+    if(anim){
+      const t = (now - anim.t0) / 1000, dur = anim.dur / 1000;
+      if(t >= dur){ endAnim(); }
+      else {
+        updateLook();
+        aw = ease(Math.min(1, t / 0.45, (dur - t) / 0.45));                       // olha para o jogador
+        const ax = ease(Math.min((t - 0.2) / 0.5, (dur - 0.1 - t) / 0.7));        // quanto o braço participa
+        if(anim.type === 'wave'){
+          angR += (60 + 80 + Math.sin(t * 13) * 14 - angR) * ax;                  // braço no alto, mão balançando
+          armFwd = 8 * ax; headRoll = Math.sin(t * 3) * 0.07 * aw;
+        } else {
+          const k1 = ease((t - 0.3) / 0.6), k2 = ease((t - 1.15) / 0.3);
+          angR += (60 + 95 - 40 * k2 - angR) * ax;                                // mão no rosto, depois lança o beijo
+          armFwd = (40 + 45 * k2) * ax;
+          eyeShut = k1 * (1 - ease((t - 1.5) / 0.25));
+          headRoll = 0.16 * k1 * (1 - k2) * aw;
+          if(!anim.heart && t > 1.25){ anim.heart = true; spawnHeart(); }
+        }
+      }
+    }
+
+    const cb = el.chefBody.object3D;
+    cb.position.y = bodyY;
+    const idleYaw = Math.sin(T * 0.55) * 0.14;
+    cb.rotation.y = idleYaw + angDiff(lookYaw, idleYaw) * aw;     // corpo gira devagar (ou para o jogador)
+    cb.rotation.z = jumping ? 0 : Math.sin(T * 0.9) * 0.03;       // balanço lateral
+    cb.scale.y = 1 + Math.sin(T * 1.7) * 0.007;
+    const hd = el.head.object3D;                                  // cabeça inclina e olha em volta
+    hd.rotation.z = Math.sin(T * 1.1) * 0.06 * (1 - aw) + headRoll;
+    hd.rotation.x = Math.sin(T * 0.8 + 1) * 0.04 * (1 - aw) + lookPitch * aw;
+    hd.rotation.y = Math.sin(T * 0.7) * 0.16 * (1 - aw);
+    const bl = (T % 3.8) > 3.65 ? 0.1 : 1;                        // piscar
+    const lid = Math.max(0.1, Math.min(bl, 1 - eyeShut));
+    el.eyeL.object3D.scale.y = 1.25 * lid;
+    el.eyeR.object3D.scale.y = 1.25 * lid;
+    el.armL.object3D.rotation.z = -angL * D;
+    el.armR.object3D.rotation.z =  angR * D;
+    el.armR.object3D.rotation.x =  armFwd * D;
+    animateHeart(now);
+
+    for(let i = confetti.length - 1; i >= 0; i--){
+      const p = confetti[i];
+      if(!p.ready) continue;
+      const o = p.e.object3D;
+      o.position.y -= p.vy * dt;
+      o.rotation.x += p.sp * dt; o.rotation.z += p.sp * 0.6 * dt;
+      if(o.position.y < 0.02){ p.e.remove(); confetti.splice(i, 1); }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  /* ---------------- Animações da confeiteira: tchauzinho e beijinho (de vez em quando) ---------------- */
+  const chefEl = $('#chef');
+  const ANIMS = { wave:{ dur:3200 }, kiss:{ dur:3600 } };
+  let anim = null, heart = null, lookV = null, lookYaw = 0, lookPitch = 0, lastAnimType = '';
+  let nextAnim = performance.now() + 8000;
+  const camLocal = [0, 0.93, 1];                        // onde o jogador (câmera) está, no espaço da confeiteira
+  const ease = x => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
+  const angDiff = (a, b) => ((a - b + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI;
+  const easeOutBack = x => { x = Math.max(0, Math.min(1, x)) - 1; return 1 + 2.70158 * x * x * x + 1.70158 * x * x; };
+
+  function startAnim(type){
+    if(anim || jumpT0 !== null || !ANIMS[type]) return false;
+    anim = { type, t0: performance.now(), dur: ANIMS[type].dur, heart: false };
+    lastAnimType = type;
+    return true;
+  }
+  function endAnim(){ anim = null; nextAnim = performance.now() + 12000 + Math.random() * 14000; }
+  function pickAnim(){ const t = Math.random() < 0.5 ? 'wave' : 'kiss'; return t === lastAnimType ? (t === 'wave' ? 'kiss' : 'wave') : t; }
+  document.addEventListener('chefanim', e => startAnim(e.detail));
+
+  function updateLook(){                                // direção do jogador em relação à confeiteira
+    const T3 = window.AFRAME && AFRAME.THREE, co = chefEl.object3D;
+    if(T3 && scn.camera && co && co.worldToLocal){
+      lookV = lookV || new T3.Vector3();
+      scn.camera.getWorldPosition(lookV); co.worldToLocal(lookV);
+      camLocal[0] = lookV.x; camLocal[1] = lookV.y; camLocal[2] = lookV.z;
+    }
+    lookYaw = Math.atan2(camLocal[0], camLocal[2]);
+    lookPitch = Math.max(-0.5, Math.min(0.45, -Math.atan2(camLocal[1] - 0.93, Math.hypot(camLocal[0], camLocal[2]) || 1)));
+  }
+
+  function spawnHeart(){
+    if(heart){ heart.e.remove(); heart = null; }
+    const yaw = el.chefBody.object3D.rotation.y;
+    const mx = Math.sin(yaw) * 0.12, mz = Math.cos(yaw) * 0.12;
+    const mat = 'color: #FF4D78; emissive: #FF2D6B; emissiveIntensity: 0.55';
+    const g = make(chefEl, 'a-entity', { id:'heart', position:`${mx} 0.9 ${mz}` });
+    const parts = [
+      make(g, 'a-box',      { rotation:'0 0 45', width:'0.06', height:'0.06', depth:'0.02', material:mat }),
+      make(g, 'a-cylinder', { position:'-0.0212 0.0212 0', rotation:'90 0 0', radius:'0.03', height:'0.02', material:mat }),
+      make(g, 'a-cylinder', { position:'0.0212 0.0212 0',  rotation:'90 0 0', radius:'0.03', height:'0.02', material:mat })
+    ];
+    const n = Math.hypot(camLocal[0], camLocal[2]) || 1;
+    heart = { e:g, parts, t0: performance.now(), x:mx, y:0.9, z:mz, dx:camLocal[0] / n, dz:camLocal[2] / n, yaw:lookYaw };
+    g.object3D.scale.set(0.01, 0.01, 0.01);
+    Sound.pop();
+  }
+  function animateHeart(now){                           // o coração surge, sobe por 2 segundos e some
+    if(!heart) return;
+    const ht = (now - heart.t0) / 1000;
+    if(ht >= 2){ heart.e.remove(); heart = null; return; }
+    const o = heart.e.object3D;
+    o.position.set(heart.x + heart.dx * ht * 0.12 + Math.sin(ht * 4) * 0.02, heart.y + ht * 0.22, heart.z + heart.dz * ht * 0.12);
+    const s = (0.5 + 1.1 * easeOutBack(ht / 0.3)) * (1 + 0.05 * Math.sin(ht * 14));
+    o.scale.set(s, s, s);
+    o.rotation.y = heart.yaw + Math.sin(ht * 3) * 0.3;
+    const fade = ht > 1.5 ? (2 - ht) / 0.5 : 1;        // some no último meio segundo
+    heart.parts.forEach(pt => {
+      const m = pt.getObject3D && pt.getObject3D('mesh');
+      if(m && m.material){ m.material.transparent = true; m.material.opacity = fade; }
+    });
+  }
+
+  function speak(txt){                                  // a cozinheira "fala" (voz do aparelho, em português)
+    try{
+      if(!('speechSynthesis' in window) || el.mute.textContent !== '🔊') return;
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'pt-BR'; u.pitch = 1.4; u.rate = 1; u.volume = 1;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    }catch(e){}
+  }
+  function celebrate(){
+    Sound.bell(); Sound.victory(); lastJump = -1;
+    spawnConfetti();
+    jumpT0 = performance.now();
+    el.banner.classList.add('show');
+    setTimeout(() => el.banner.classList.remove('show'), 3600);
+    setTimeout(() => speak('Parabéns!'), 700);
+  }
+
+  /* ---------------- Interface ---------------- */
+  const labelOf = (list, id) => { const o = list.find(x => x.id === id); return o ? o.label : '-'; };
+  const names = (list, ids) => (ids || []).map(id => labelOf(list, id)).join(', ') || '-';
+  function hasSelection(){
+    const s = state.step;
+    if(s === 0) return !!state.selected;
+    if(s === 1) return state.painted;
+    if(s === 2 || s === 3) return (state.selected || []).length > 0;
+    return true;
+  }
+
+  function optButton(o, cls){
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'opt' + (cls ? ' ' + cls : ''); b.dataset.id = o.id;
+    b.innerHTML = (o.emoji ? `<span class="em">${o.emoji}</span>` : `<span class="sw" style="background:${o.color}"></span>`) + `<span>${o.label}</span>`;
+    return b;
+  }
+
+  function render(){
+    const s = state.step;
+    el.dots.forEach((d, i) => d.classList.toggle('on', i <= Math.min(s, 4)));
+    el.stepLabel.textContent = (s < 5 ? `Passo ${s + 1} de 5` : 'Pizza pronta!') + ' · v1';
+    el.options.innerHTML = '';
+    el.summary.classList.remove('on');
+    setHighlight(s === 2 ? 1 : s === 3 ? -1 : 0);
+    if(pz.ready) pz.line.visible = s >= 1 && s <= 3;
+
+    if(s < 4){
+      const st = STEPS[s];
+      if(st.multi && !Array.isArray(state.selected)) state.selected = [];
+      el.title.textContent = st.title;
+      el.say.textContent = st.say;
+      stepOptions(s).forEach(o => {
+        const b = optButton(o);
+        b.setAttribute('role', st.multi ? 'checkbox' : 'radio'); b.setAttribute('aria-checked', 'false');
+        b.addEventListener('click', () => select(o.id));
+        el.options.appendChild(b);
+      });
+      if(s === 1){                                      // ações do desenho
+        const fill = optButton({id:'fill', label:'Cobrir tudo', emoji:'🪣'}, 'act');
+        fill.addEventListener('click', () => { Sound.tick(); fillAll(); });
+        const clr = optButton({id:'clear', label:'Apagar tudo', emoji:'🧽'}, 'act');
+        clr.addEventListener('click', () => { Sound.whoosh(); clearPaint(); });
+        el.options.appendChild(fill); el.options.appendChild(clr);
+        if(placed) flashHint('👆 Escolha a cobertura e passe o dedo na massa. Dica: toque na barrinha do painel para escondê-lo.', 4500);
+      }
+      refreshSel();
+      el.main.textContent = 'Confirmar ✔';
+      el.main.disabled = !hasSelection();
+    } else if(s === 4){
+      el.title.textContent = '5. Pizza pronta?';
+      el.say.textContent = 'Confira sua pizza e confirme!';
+      showSummary();
+      el.main.textContent = 'Pizza pronta! 🍕🎉';
+      el.main.disabled = false;
+    } else {
+      el.title.textContent = 'Parabéns, pizzaiolo(a)!';
+      el.say.textContent = 'Sua pizza ficou uma delícia!';
+      showSummary();
+      el.main.textContent = 'Fazer Outra Pizza 🔄';
+      el.main.disabled = false;
+    }
+  }
+  function showSummary(){
+    const c = state.choice;
+    el.summary.innerHTML =
+      `🥣 Massa: <b>${labelOf(MASSAS, c.massa)}</b><br>` +
+      `🧀 Cobertura: <b>${names(COBERTURAS, c.cobertura)}</b><br>` +
+      `🍕 1ª metade: <b>${names(ING, c.lado1)}</b><br>` +
+      `🍕 2ª metade: <b>${names(ING, c.lado2)}</b>`;
+    el.summary.classList.add('on');
+  }
+  function refreshSel(){
+    const s = state.step, multi = !!STEPS[s].multi;
+    el.options.querySelectorAll('.opt:not(.act)').forEach(b => {
+      const on = s === 1 ? b.dataset.id === state.brush
+               : multi   ? state.selected.indexOf(b.dataset.id) >= 0
+               :           b.dataset.id === state.selected;
+      b.classList.toggle('sel', on); b.setAttribute('aria-checked', String(on));
+    });
+  }
+  function select(id){
+    const s = state.step, multi = !!STEPS[s].multi;
+    if(s === 1) state.brush = id;
+    else if(multi){
+      const k = state.selected.indexOf(id);
+      if(k >= 0) state.selected.splice(k, 1); else state.selected.push(id);
+    } else state.selected = id;
+    refreshSel();
+    el.main.disabled = !hasSelection();
+    const idx = stepOptions(s).findIndex(o => o.id === id);
+    Sound.select(idx < 0 ? 0 : idx % 12);
+  }
+
+  function applyStep(){
+    const s = state.step, sel = state.selected;
+    if(s === 0){
+      const o = MASSAS.find(m => m.id === sel);
+      state.choice.massa = sel;
+      setDough(o.color);
+      drop(el.gDough, 0.45, 750);
+      setTimeout(() => { if(pz.ready) pz.paint.visible = true; }, 700);
+    } else if(s === 1){
+      state.choice.cobertura = [...state.used];
+      Sound.sparkle();
+    } else {
+      state.choice[s === 2 ? 'lado1' : 'lado2'] = sel.slice();
+      addToppings(s === 2 ? 1 : -1, sel);
+    }
+    Sound.setLevel(Math.min(2, s + 1));
+  }
+
+  el.main.addEventListener('click', () => {
+    Sound.unlock();
+    if(!placed){ Sound.tick(); flashHint('📌 Leia o QR code e toque em <b>Fixar</b> para continuar'); return; }
+    if(state.step < 4){
+      if(!hasSelection()) return;
+      Sound.confirm(); applyStep();
+      state.step++; state.selected = null; render();
+    } else if(state.step === 4){
+      celebrate();
+      state.step = 5; render();
+    } else {
+      resetAll();
+    }
+  });
+
+  function resetAll(){
+    jumpT0 = null;
+    clearConfetti();
+    el.banner.classList.remove('show');
+    try{ speechSynthesis.cancel(); }catch(e){}
+    hideGroup(el.gDough);
+    clearToppings(); clearPaint();
+    if(pz.ready){ pz.paint.visible = false; pz.line.visible = false; }
+    el.pizza.object3D.rotation.y = 0;
+    setDough(MASSAS[0].color);
+    state.step = 0; state.selected = null; state.choice = {}; state.brush = null;
+    Sound.whoosh(); Sound.setLevel(0);
+    render();
+  }
+
+  /* ---------------- Marcador ---------------- */
+  const marker = $('#marker');
+  const HINT_DEFAULT = '📷 Aponte a câmera para o <b>marcador QR</b>';
+  const warn = msg => { el.hint.innerHTML = msg; el.hint.classList.remove('hide'); };
+
+  /* ---------------- Fixar os modelos onde o QR code foi lido ---------------- */
+  const world = $('#world');
+  const scn = document.querySelector('a-scene');
+  const placeBtn = $('#placeBtn'), removeBtn = $('#removeBtn'), closeBtn = $('#closeBtn');
+  let placed = false, markerVisible = false, anchor = null, closed = false;
+  let lastPose = null, lastSeen = 0, lostTimer = null, tmp = null, lastSnd = 0, hintTimer = null;
+  const base = { p:[0,0,0], q:[0,0,0,1], s:[1,1,1], cam:[0,0,0] };
+
+  function flashHint(html, ms){
+    el.hint.innerHTML = html; el.hint.classList.remove('hide');
+    clearTimeout(hintTimer);
+    hintTimer = setTimeout(() => { if(placed || markerVisible) el.hint.classList.add('hide'); }, ms || 2200);
+  }
+  function syncUI(){
+    const b = document.body;
+    b.classList.toggle('placed', placed);
+    b.classList.toggle('canplace', !placed && markerVisible);
+    removeBtn.disabled = !placed;
+    el.main.classList.toggle('wait', !placed);
+  }
+
+  // ---- referências ----
+  let camPos = null, attached = 'marker', frameN = 0, saveN = 0;
+  const calib = Orient.makeCalib();
+  let rotScale = 0.75, calibrated = false;               // escala do giro (aprendida com o QR)
+  try{ const sv = parseFloat(localStorage.getItem('fcra_rot')); if(isFinite(sv) && sv > -1.3 && sv < 1.3){ rotScale = sv; calibrated = true; } }catch(e){}
+  const verEl = $('#ver');
+
+  function getCam(){                                      // posição da câmera (fixa no AR.js)
+    if(camPos) return camPos;
+    const T3 = window.AFRAME && AFRAME.THREE;
+    if(T3 && scn.camera){ const c = new T3.Vector3(); scn.camera.getWorldPosition(c); camPos = [c.x, c.y, c.z]; return camPos; }
+    return [0, 0, 0];
+  }
+  function attachToMarker(){ if(attached !== 'marker'){ marker.object3D.add(world.object3D); attached = 'marker'; } }
+  function attachToAnchor(){
+    if(attached === 'anchor' || !anchor) return;
+    if(!anchor.parent) scn.object3D.add(anchor);
+    anchor.add(world.object3D); world.object3D.visible = true; attached = 'anchor';
+  }
+
+  // guarda a posição do marcador enquanto ele está visível (para o botão "Fixar" funcionar mesmo se piscar)
+  function capturePose(){
+    const mk = marker.object3D, T3 = window.AFRAME && AFRAME.THREE;
+    if(!mk || !mk.visible || !T3) return;
+    tmp = tmp || { p:new T3.Vector3(), q:new T3.Quaternion(), s:new T3.Vector3() };
+    mk.updateMatrixWorld(true);
+    mk.getWorldPosition(tmp.p); mk.getWorldQuaternion(tmp.q); mk.getWorldScale(tmp.s);
+    const pose = { p:[tmp.p.x, tmp.p.y, tmp.p.z], q:[tmp.q.x, tmp.q.y, tmp.q.z, tmp.q.w], s:[tmp.s.x, tmp.s.y, tmp.s.z] };
+    if([].concat(pose.p, pose.q, pose.s).every(Number.isFinite)){ lastPose = pose; lastSeen = performance.now(); }
+  }
+
+  function learnScale(now){
+    if(!lastPose) return;
+    const c = getCam(), d = [lastPose.p[0] - c[0], lastPose.p[1] - c[1], lastPose.p[2] - c[2]], n = Math.hypot(d[0], d[1], d[2]);
+    const q = Orient.current();
+    if(!q || n < 1e-6) return;
+    calib.push(now, q, [d[0] / n, d[1] / n, d[2] / n]);
+    const est = calib.get();
+    if(est === null || calib.weight() < 0.05) return;
+    rotScale += (Math.max(-1.3, Math.min(1.3, est)) - rotScale) * 0.06;
+    calibrated = true;
+    if(++saveN % 120 === 0 && calib.weight() > 0.3){ try{ localStorage.setItem('fcra_rot', rotScale.toFixed(3)); }catch(e){} }
+  }
+
+  // a cada quadro
+  function updateAnchor(now){
+    Orient.update();
+    const vis = !!(marker.object3D && marker.object3D.visible);
+    if(vis){ capturePose(); learnScale(now); } else calib.reset();
+
+    if(placed && anchor){
+      if(vis){
+        // QR à vista: os modelos ficam presos nele (rastreamento completo, sem escorregar)
+        if(lastPose && performance.now() - lastSeen < 100){
+          base.p = lastPose.p.slice(); base.q = lastPose.q.slice(); base.s = lastPose.s.slice(); Orient.mark();
+        }
+        attachToMarker();
+      } else {
+        // sem QR: segura a última posição e compensa o giro do aparelho (giroscópio calibrado)
+        attachToAnchor();
+        const R = Orient.delta(rotScale), cam = base.cam;
+        let pp = base.p, qq = base.q;
+        if(R){
+          const M = Orient.math;
+          qq = M.mul(R, base.q);
+          const rel = M.rot(R, [pp[0] - cam[0], pp[1] - cam[1], pp[2] - cam[2]]);
+          pp = [cam[0] + rel[0], cam[1] + rel[1], cam[2] + rel[2]];
+        }
+        anchor.position.set(pp[0], pp[1], pp[2]);
+        anchor.quaternion.set(qq[0], qq[1], qq[2], qq[3]);
+        anchor.scale.set(base.s[0], base.s[1], base.s[2]);
+      }
+    }
+    if(++frameN % 20 === 0) verEl.textContent = 'pizza v1 · giro ' + rotScale.toFixed(2) + (calibrated ? ' ✓' : ' ~');
+  }
+
+  function placeModels(){
+    if(placed) return;
+    const T3 = window.AFRAME && AFRAME.THREE;
+    if(!T3 || !lastPose || performance.now() - lastSeen > 2000){ flashHint('📷 Aponte para o QR code e tente de novo'); return; }
+    base.p = lastPose.p.slice(); base.q = lastPose.q.slice(); base.s = lastPose.s.slice(); base.cam = getCam();
+    anchor = new T3.Group();
+    Orient.mark();
+    placed = true;
+    clearTimeout(lostTimer);
+    document.body.classList.add('ready');             // libera a interface do jogo
+    Sound.confirm();
+    syncUI();
+    flashHint('📌 Modelos fixados! Pode tirar o QR code da frente da câmera.', 2600);
+  }
+
+  function removeModels(){
+    if(!placed) return;
+    Orient.clear();
+    attachToMarker();                                 // volta a seguir o marcador (pronto para nova leitura)
+    if(anchor && anchor.parent) anchor.parent.remove(anchor);
+    anchor = null; placed = false;
+    Sound.whoosh();
+    syncUI();
+    if(markerVisible) el.hint.classList.add('hide');
+    else flashHint('🗑️ Modelos removidos. Aponte para o QR code e toque em <b>Fixar</b>.', 4000);
+  }
+
+  function closeGame(){
+    closed = true;
+    try{ Sound.shutdown(); }catch(e){}
+    document.querySelectorAll('video').forEach(v => {
+      try{ const s = v.srcObject; if(s && s.getTracks) s.getTracks().forEach(tr => tr.stop()); v.srcObject = null; v.pause(); v.remove(); }catch(e){}
+    });
+    try{ if(scn.renderer && scn.renderer.setAnimationLoop) scn.renderer.setAnimationLoop(null); if(scn.pause) scn.pause(); }catch(e){}
+    try{ scn.remove(); }catch(e){}
+    document.body.classList.remove('started', 'ready', 'placed', 'canplace');
+    document.body.classList.add('closed');
+    $('#confirmClose').hidden = true;
+    $('#bye').hidden = false;
+    try{ window.close(); }catch(e){}                  // só funciona se a aba foi aberta pelo próprio jogo
+  }
+
+  placeBtn.addEventListener('click', () => { Sound.unlock(); placeModels(); });
+  removeBtn.addEventListener('click', () => { Sound.unlock(); removeModels(); });
+  closeBtn.addEventListener('click', () => { Sound.tick(); $('#confirmClose').hidden = false; });
+  $('#ccNo').addEventListener('click', () => { Sound.tick(); $('#confirmClose').hidden = true; });
+  $('#ccYes').addEventListener('click', closeGame);
+  $('#byeBtn').addEventListener('click', () => location.reload());
+
+  // O botão "Fixar" aparece no centro da tela enquanto o QR code está sendo lido
+  marker.addEventListener('markerFound', () => {
+    clearTimeout(lostTimer);
+    markerVisible = true;
+    if(!placed){
+      el.hint.classList.add('hide');
+      const n = performance.now(); if(n - lastSnd > 2000){ Sound.found(); lastSnd = n; }
+    }
+    syncUI();
+  });
+  marker.addEventListener('markerLost', () => {
+    clearTimeout(lostTimer);
+    lostTimer = setTimeout(() => {                    // pequena tolerância para não piscar o botão
+      markerVisible = false;
+      if(!placed){
+        el.hint.innerHTML = HINT_DEFAULT; el.hint.classList.remove('hide');
+        const n = performance.now(); if(n - lastSnd > 2000){ Sound.lost(); lastSnd = n; }
+      }
+      syncUI();
+    }, 900);
+  });
+
+  // Diagnóstico da câmera
+  if(!window.isSecureContext || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)){
+    warn('⚠️ A câmera só abre em link <b>HTTPS</b> no Chrome/Safari (não como arquivo local).');
+  }
+  window.addEventListener('camera-error', () =>
+    warn('📷 Não consegui abrir a câmera. Permita o acesso nas configurações do navegador e recarregue.'));
+
+  // Minimizar / expandir painel
+  $('#handle').addEventListener('click', () => { Sound.tick(); $('#panel').classList.toggle('min'); });
+
+  // Cor da mesa: toque no 🎨 para trocar
+  const TABLE_COLORS = ['#D9B38C', '#FFFFFF', '#BFE3D0', '#BBD9F2', '#FBE7A1'];
+  let tc = 0;
+  $('#tableBtn').addEventListener('click', () => {
+    Sound.tick();
+    tc = (tc + 1) % TABLE_COLORS.length;
+    document.querySelectorAll('.tabletop').forEach(e => e.setAttribute('color', TABLE_COLORS[tc]));
+  });
+
+  // Brilho da câmera: toque no ☀️ para clarear ou escurecer a imagem
+  const LEVELS = [1.0, 1.5, 2.0, 2.6];
+  let lv = 1;
+  $('#sunBtn').addEventListener('click', () => {
+    Sound.tick();
+    lv = (lv + 1) % LEVELS.length;
+    document.documentElement.style.setProperty('--cam-bright', LEVELS[lv]);
+    el.hint.innerHTML = '☀️ Brilho da câmera: nível ' + (lv + 1) + ' de ' + LEVELS.length;
+    el.hint.classList.remove('hide');
+    clearTimeout(window.__sunT);
+    window.__sunT = setTimeout(() => { if(placed || markerVisible) el.hint.classList.add('hide'); }, 1400);
+  });
+
+  // Proteção: esconde qualquer peça da cozinheira que apareça grande demais (ex.: disco)
+  function guardChef(){
+    document.querySelectorAll('#chef *').forEach(e => {
+      const m = e.getObject3D && e.getObject3D('mesh');
+      if(!m || !m.geometry) return;
+      m.geometry.computeBoundingBox();
+      const b = m.geometry.boundingBox, s = e.object3D.scale;
+      const big = Math.max((b.max.x - b.min.x) * s.x, (b.max.y - b.min.y) * s.y, (b.max.z - b.min.z) * s.z);
+      if(big > 0.7){ e.setAttribute('visible', false); console.warn('peça grande escondida', e.tagName, big); }
+    });
+  }
+  const sceneEl = document.querySelector('a-scene');
+  if(sceneEl){
+    const run = () => setTimeout(guardChef, 800);
+    if(sceneEl.hasLoaded) run(); else sceneEl.addEventListener('loaded', run);
+  }
+
+  render();
+  syncUI();
+}
+
+/* ---------------- Padrão do marcador QR (embutido, sem arquivo externo) ---------------- */
+const PATT = `182 138 138 168 202 182 252 217 123 130 180 196 168 138 138 182
+138 154 136 138 181 142 105 141 107  83 174 161 138 136 154 138
+138 136 115 138 118 212  66 103 160 107 130 171 138 115 136 138
+169 138 138 155 202 155 161 124  97 129 167 141 155 138 138 169
+133  48 144 142 189  85 170 146  83 169 141 120 128 169  91 142
+250 190 143 151  28  11  76 150  97 139  71 120 104  78 107 178
+193 138 195 152 112 150 152  51 130 204 187  65 137  90 104 245
+218 168 101  97  61 158  88  89 172  25  39 128 112 155 106 223
+228 178  81 137  74  73 125  90 170 173  46  98  48  52  80 163
+236 103  96 108 160  34 219 117  87 170 130  91 119 119 168 198
+200 161  39 102  88 125 217 114  10 118  71  25 102 216  85 128
+182 101 164 119 167 186 106 136 201 123 135 116  51  44 176 192
+169 138 138 155 128 171  40 113 103 118 131  66 202 124 204 251
+138 136 115 138 172  74 127 163 170  82 103  47 124 104  66 233
+138 154 136 138  88 179 118  73  87 160  97  98 130 219 195 198
+182 138 138 168 191 185 189 117 117 163 186 186 241 249 202 245
+182 138 138 168 202 182 252 217 123 130 180 196 168 138 138 182
+138 154 136 138 181 142 105 141 107  83 174 161 138 136 154 138
+138 136 115 138 118 212  66 103 160 107 130 171 138 115 136 138
+169 138 138 155 202 155 161 124  97 129 167 141 155 138 138 169
+133  48 144 142 189  85 170 146  83 169 141 120 128 169  91 142
+250 190 143 151  28  11  76 150  97 139  71 120 104  78 107 178
+193 138 195 152 112 150 152  51 130 204 187  65 137  90 104 245
+218 168 101  97  61 158  88  89 172  25  39 128 112 155 106 223
+228 178  81 137  74  73 125  90 170 173  46  98  48  52  80 163
+236 103  96 108 160  34 219 117  87 170 130  91 119 119 168 198
+200 161  39 102  88 125 217 114  10 118  71  25 102 216  85 128
+182 101 164 119 167 186 106 136 201 123 135 116  51  44 176 192
+169 138 138 155 128 171  40 113 103 118 131  66 202 124 204 251
+138 136 115 138 172  74 127 163 170  82 103  47 124 104  66 233
+138 154 136 138  88 179 118  73  87 160  97  98 130 219 195 198
+182 138 138 168 191 185 189 117 117 163 186 186 241 249 202 245
+182 138 138 168 202 182 252 217 123 130 180 196 168 138 138 182
+138 154 136 138 181 142 105 141 107  83 174 161 138 136 154 138
+138 136 115 138 118 212  66 103 160 107 130 171 138 115 136 138
+169 138 138 155 202 155 161 124  97 129 167 141 155 138 138 169
+133  48 144 142 189  85 170 146  83 169 141 120 128 169  91 142
+250 190 143 151  28  11  76 150  97 139  71 120 104  78 107 178
+193 138 195 152 112 150 152  51 130 204 187  65 137  90 104 245
+218 168 101  97  61 158  88  89 172  25  39 128 112 155 106 223
+228 178  81 137  74  73 125  90 170 173  46  98  48  52  80 163
+236 103  96 108 160  34 219 117  87 170 130  91 119 119 168 198
+200 161  39 102  88 125 217 114  10 118  71  25 102 216  85 128
+182 101 164 119 167 186 106 136 201 123 135 116  51  44 176 192
+169 138 138 155 128 171  40 113 103 118 131  66 202 124 204 251
+138 136 115 138 172  74 127 163 170  82 103  47 124 104  66 233
+138 154 136 138  88 179 118  73  87 160  97  98 130 219 195 198
+182 138 138 168 191 185 189 117 117 163 186 186 241 249 202 245
+
+182 138 138 169 142 178 245 223 163 198 128 192 251 233 198 245
+138 154 136 138  91 107 104 106  80 168  85 176 204  66 195 202
+138 136 115 138 169  78  90 155  52 119 216  44 124 104 219 249
+168 138 138 155 128 104 137 112  48 119 102  51 202 124 130 241
+196 161 171 141 120 120  65 128  98  91  25 116  66  47  98 186
+180 174 130 167 141  71 187  39  46 130  71 135 131 103  97 186
+130  83 107 129 169 139 204  25 173 170 118 123 118  82 160 163
+123 107 160  97  83  97 130 172 170  87  10 201 103 170  87 117
+217 141 103 124 146 150  51  89  90 117 114 136 113 163  73 117
+252 105  66 161 170  76 152  88 125 219 217 106  40 127 118 189
+182 142 212 155  85  11 150 158  73  34 125 186 171  74 179 185
+202 181 118 202 189  28 112  61  74 160  88 167 128 172  88 191
+168 138 138 155 142 151 152  97 137 108 102 119 155 138 138 168
+138 136 115 138 144 143 195 101  81  96  39 164 138 115 136 138
+138 154 136 138  48 190 138 168 178 103 161 101 138 136 154 138
+182 138 138 169 133 250 193 218 228 236 200 182 169 138 138 182
+182 138 138 169 142 178 245 223 163 198 128 192 251 233 198 245
+138 154 136 138  91 107 104 106  80 168  85 176 204  66 195 202
+138 136 115 138 169  78  90 155  52 119 216  44 124 104 219 249
+168 138 138 155 128 104 137 112  48 119 102  51 202 124 130 241
+196 161 171 141 120 120  65 128  98  91  25 116  66  47  98 186
+180 174 130 167 141  71 187  39  46 130  71 135 131 103  97 186
+130  83 107 129 169 139 204  25 173 170 118 123 118  82 160 163
+123 107 160  97  83  97 130 172 170  87  10 201 103 170  87 117
+217 141 103 124 146 150  51  89  90 117 114 136 113 163  73 117
+252 105  66 161 170  76 152  88 125 219 217 106  40 127 118 189
+182 142 212 155  85  11 150 158  73  34 125 186 171  74 179 185
+202 181 118 202 189  28 112  61  74 160  88 167 128 172  88 191
+168 138 138 155 142 151 152  97 137 108 102 119 155 138 138 168
+138 136 115 138 144 143 195 101  81  96  39 164 138 115 136 138
+138 154 136 138  48 190 138 168 178 103 161 101 138 136 154 138
+182 138 138 169 133 250 193 218 228 236 200 182 169 138 138 182
+182 138 138 169 142 178 245 223 163 198 128 192 251 233 198 245
+138 154 136 138  91 107 104 106  80 168  85 176 204  66 195 202
+138 136 115 138 169  78  90 155  52 119 216  44 124 104 219 249
+168 138 138 155 128 104 137 112  48 119 102  51 202 124 130 241
+196 161 171 141 120 120  65 128  98  91  25 116  66  47  98 186
+180 174 130 167 141  71 187  39  46 130  71 135 131 103  97 186
+130  83 107 129 169 139 204  25 173 170 118 123 118  82 160 163
+123 107 160  97  83  97 130 172 170  87  10 201 103 170  87 117
+217 141 103 124 146 150  51  89  90 117 114 136 113 163  73 117
+252 105  66 161 170  76 152  88 125 219 217 106  40 127 118 189
+182 142 212 155  85  11 150 158  73  34 125 186 171  74 179 185
+202 181 118 202 189  28 112  61  74 160  88 167 128 172  88 191
+168 138 138 155 142 151 152  97 137 108 102 119 155 138 138 168
+138 136 115 138 144 143 195 101  81  96  39 164 138 115 136 138
+138 154 136 138  48 190 138 168 178 103 161 101 138 136 154 138
+182 138 138 169 133 250 193 218 228 236 200 182 169 138 138 182
+
+245 202 249 241 186 186 163 117 117 189 185 191 168 138 138 182
+198 195 219 130  98  97 160  87  73 118 179  88 138 136 154 138
+233  66 104 124  47 103  82 170 163 127  74 172 138 115 136 138
+251 204 124 202  66 131 118 103 113  40 171 128 155 138 138 169
+192 176  44  51 116 135 123 201 136 106 186 167 119 164 101 182
+128  85 216 102  25  71 118  10 114 217 125  88 102  39 161 200
+198 168 119 119  91 130 170  87 117 219  34 160 108  96 103 236
+163  80  52  48  98  46 173 170  90 125  73  74 137  81 178 228
+223 106 155 112 128  39  25 172  89  88 158  61  97 101 168 218
+245 104  90 137  65 187 204 130  51 152 150 112 152 195 138 193
+178 107  78 104 120  71 139  97 150  76  11  28 151 143 190 250
+142  91 169 128 120 141 169  83 146 170  85 189 142 144  48 133
+169 138 138 155 141 167 129  97 124 161 155 202 155 138 138 169
+138 136 115 138 171 130 107 160 103  66 212 118 138 115 136 138
+138 154 136 138 161 174  83 107 141 105 142 181 138 136 154 138
+182 138 138 168 196 180 130 123 217 252 182 202 168 138 138 182
+245 202 249 241 186 186 163 117 117 189 185 191 168 138 138 182
+198 195 219 130  98  97 160  87  73 118 179  88 138 136 154 138
+233  66 104 124  47 103  82 170 163 127  74 172 138 115 136 138
+251 204 124 202  66 131 118 103 113  40 171 128 155 138 138 169
+192 176  44  51 116 135 123 201 136 106 186 167 119 164 101 182
+128  85 216 102  25  71 118  10 114 217 125  88 102  39 161 200
+198 168 119 119  91 130 170  87 117 219  34 160 108  96 103 236
+163  80  52  48  98  46 173 170  90 125  73  74 137  81 178 228
+223 106 155 112 128  39  25 172  89  88 158  61  97 101 168 218
+245 104  90 137  65 187 204 130  51 152 150 112 152 195 138 193
+178 107  78 104 120  71 139  97 150  76  11  28 151 143 190 250
+142  91 169 128 120 141 169  83 146 170  85 189 142 144  48 133
+169 138 138 155 141 167 129  97 124 161 155 202 155 138 138 169
+138 136 115 138 171 130 107 160 103  66 212 118 138 115 136 138
+138 154 136 138 161 174  83 107 141 105 142 181 138 136 154 138
+182 138 138 168 196 180 130 123 217 252 182 202 168 138 138 182
+245 202 249 241 186 186 163 117 117 189 185 191 168 138 138 182
+198 195 219 130  98  97 160  87  73 118 179  88 138 136 154 138
+233  66 104 124  47 103  82 170 163 127  74 172 138 115 136 138
+251 204 124 202  66 131 118 103 113  40 171 128 155 138 138 169
+192 176  44  51 116 135 123 201 136 106 186 167 119 164 101 182
+128  85 216 102  25  71 118  10 114 217 125  88 102  39 161 200
+198 168 119 119  91 130 170  87 117 219  34 160 108  96 103 236
+163  80  52  48  98  46 173 170  90 125  73  74 137  81 178 228
+223 106 155 112 128  39  25 172  89  88 158  61  97 101 168 218
+245 104  90 137  65 187 204 130  51 152 150 112 152 195 138 193
+178 107  78 104 120  71 139  97 150  76  11  28 151 143 190 250
+142  91 169 128 120 141 169  83 146 170  85 189 142 144  48 133
+169 138 138 155 141 167 129  97 124 161 155 202 155 138 138 169
+138 136 115 138 171 130 107 160 103  66 212 118 138 115 136 138
+138 154 136 138 161 174  83 107 141 105 142 181 138 136 154 138
+182 138 138 168 196 180 130 123 217 252 182 202 168 138 138 182
+
+182 138 138 169 182 200 236 228 218 193 250 133 169 138 138 182
+138 154 136 138 101 161 103 178 168 138 190  48 138 136 154 138
+138 136 115 138 164  39  96  81 101 195 143 144 138 115 136 138
+168 138 138 155 119 102 108 137  97 152 151 142 155 138 138 168
+191  88 172 128 167  88 160  74  61 112  28 189 202 118 181 202
+185 179  74 171 186 125  34  73 158 150  11  85 155 212 142 182
+189 118 127  40 106 217 219 125  88 152  76 170 161  66 105 252
+117  73 163 113 136 114 117  90  89  51 150 146 124 103 141 217
+117  87 170 103 201  10  87 170 172 130  97  83  97 160 107 123
+163 160  82 118 123 118 170 173  25 204 139 169 129 107  83 130
+186  97 103 131 135  71 130  46  39 187  71 141 167 130 174 180
+186  98  47  66 116  25  91  98 128  65 120 120 141 171 161 196
+241 130 124 202  51 102 119  48 112 137 104 128 155 138 138 168
+249 219 104 124  44 216 119  52 155  90  78 169 138 115 136 138
+202 195  66 204 176  85 168  80 106 104 107  91 138 136 154 138
+245 198 233 251 192 128 198 163 223 245 178 142 169 138 138 182
+182 138 138 169 182 200 236 228 218 193 250 133 169 138 138 182
+138 154 136 138 101 161 103 178 168 138 190  48 138 136 154 138
+138 136 115 138 164  39  96  81 101 195 143 144 138 115 136 138
+168 138 138 155 119 102 108 137  97 152 151 142 155 138 138 168
+191  88 172 128 167  88 160  74  61 112  28 189 202 118 181 202
+185 179  74 171 186 125  34  73 158 150  11  85 155 212 142 182
+189 118 127  40 106 217 219 125  88 152  76 170 161  66 105 252
+117  73 163 113 136 114 117  90  89  51 150 146 124 103 141 217
+117  87 170 103 201  10  87 170 172 130  97  83  97 160 107 123
+163 160  82 118 123 118 170 173  25 204 139 169 129 107  83 130
+186  97 103 131 135  71 130  46  39 187  71 141 167 130 174 180
+186  98  47  66 116  25  91  98 128  65 120 120 141 171 161 196
+241 130 124 202  51 102 119  48 112 137 104 128 155 138 138 168
+249 219 104 124  44 216 119  52 155  90  78 169 138 115 136 138
+202 195  66 204 176  85 168  80 106 104 107  91 138 136 154 138
+245 198 233 251 192 128 198 163 223 245 178 142 169 138 138 182
+182 138 138 169 182 200 236 228 218 193 250 133 169 138 138 182
+138 154 136 138 101 161 103 178 168 138 190  48 138 136 154 138
+138 136 115 138 164  39  96  81 101 195 143 144 138 115 136 138
+168 138 138 155 119 102 108 137  97 152 151 142 155 138 138 168
+191  88 172 128 167  88 160  74  61 112  28 189 202 118 181 202
+185 179  74 171 186 125  34  73 158 150  11  85 155 212 142 182
+189 118 127  40 106 217 219 125  88 152  76 170 161  66 105 252
+117  73 163 113 136 114 117  90  89  51 150 146 124 103 141 217
+117  87 170 103 201  10  87 170 172 130  97  83  97 160 107 123
+163 160  82 118 123 118 170 173  25 204 139 169 129 107  83 130
+186  97 103 131 135  71 130  46  39 187  71 141 167 130 174 180
+186  98  47  66 116  25  91  98 128  65 120 120 141 171 161 196
+241 130 124 202  51 102 119  48 112 137 104 128 155 138 138 168
+249 219 104 124  44 216 119  52 155  90  78 169 138 115 136 138
+202 195  66 204 176  85 168  80 106 104 107  91 138 136 154 138
+245 198 233 251 192 128 198 163 223 245 178 142 169 138 138 182
+`;
+
+/* ---------------- Pedido de permissão da câmera ---------------- */
+(function(){
+  const btn = document.getElementById('startBtn');
+  const msg = document.getElementById('startMsg');
+  const screen = document.getElementById('start');
+  let started = false;
+
+  function fail(text){ msg.textContent = text; btn.disabled = false; btn.textContent = '📷 Tentar novamente'; }
+
+  function launch(){
+    if(started) return; started = true;
+    const tpl = document.getElementById('sceneTpl');
+    tpl.content.querySelector('#marker').setAttribute('url', URL.createObjectURL(new Blob([PATT], {type:'text/plain'})));
+    document.body.insertBefore(document.importNode(tpl.content, true), document.getElementById('hud'));
+    initGame();
+    document.body.classList.add('started');
+    // diagnóstico: confere se a imagem da câmera realmente entrou na página
+    setTimeout(() => {
+      const v = document.querySelector('video');
+      const h = document.getElementById('hint');
+      if(!v){ h.innerHTML = '📷 A câmera não iniciou. Recarregue a página e permita a câmera.'; h.classList.remove('hide'); }
+      else if(v.paused){ v.play().catch(() => {}); }
+    }, 3500);
+    screen.classList.add('out');
+    setTimeout(() => screen.remove(), 600);
+  }
+
+  const mv = document.getElementById('markerView');
+  document.getElementById('markerBtn').addEventListener('click', () => { mv.hidden = false; });
+  document.getElementById('markerClose').addEventListener('click', () => { mv.hidden = true; });
+
+  btn.addEventListener('click', async () => {
+    Sound.unlock(); Sound.startMusic(); Sound.tick();   // precisa ser dentro do toque
+    msg.textContent = '';
+    if(!window.isSecureContext || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      return fail('A câmera só funciona em link HTTPS (não como arquivo local). Hospede o arquivo e abra o link seguro no Chrome ou Safari.');
+    }
+    btn.disabled = true; btn.textContent = 'Aguardando permissão…';
+    try{
+      await Orient.request();   // iPhone: pede acesso aos sensores de movimento (no Android não pergunta nada)
+      // Isso faz o navegador mostrar o aviso "Permitir que este site use a câmera?"
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:'environment' } }, audio:false });
+      stream.getTracks().forEach(t => t.stop());
+      launch();
+    }catch(err){
+      const n = err && err.name;
+      if(n === 'NotAllowedError' || n === 'SecurityError')
+        fail('Permissão negada. Toque no cadeado 🔒 ao lado do endereço, permita a câmera e tente novamente.');
+      else if(n === 'NotFoundError' || n === 'OverconstrainedError')
+        fail('Nenhuma câmera foi encontrada neste aparelho.');
+      else if(n === 'NotReadableError')
+        fail('A câmera está sendo usada por outro app. Feche-o e tente novamente.');
+      else
+        fail('Não foi possível abrir a câmera. Recarregue a página e tente de novo.');
+    }
+  });
+})();
+</script>
+</body>
+</html>
